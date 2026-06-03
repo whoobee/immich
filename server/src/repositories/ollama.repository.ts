@@ -17,6 +17,10 @@ export type MemoryStoryResult = {
   /** Optional editorial picks from the LLM — ffmpeg xfade transition names,
    *  one per cut. Validated against the allowed pool by the caller. */
   transitions?: string[];
+  /** Optional audio pick — the LLM nominates a filename from the supplied
+   *  library. Validated against the actual file list by the caller; falls
+   *  back to tag-based pickAudioForTheme when missing or invalid. */
+  audioFile?: string;
 };
 
 const DEFAULT_TIMEOUT_MS = 120_000;
@@ -78,7 +82,8 @@ export class OllamaRepository {
       const transitions = Array.isArray(result.transitions)
         ? result.transitions.filter((t): t is string => typeof t === 'string')
         : undefined;
-      return { title: result.title, story: result.story, transitions };
+      const audioFile = typeof result.audioFile === 'string' ? result.audioFile : undefined;
+      return { title: result.title, story: result.story, transitions, audioFile };
     } finally {
       clearTimeout(timer);
     }

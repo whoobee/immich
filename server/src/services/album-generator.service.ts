@@ -77,6 +77,9 @@ function firstSentence(text: string): string {
 @Injectable()
 export class AlbumGeneratorService extends BaseService {
   private lock = false;
+  /** Active timers for jitter delays and extraRunsPerWeek surprise fires.
+   *  Tracked so onConfigUpdate can cancel them when settings change. */
+  private pendingTimers: ReturnType<typeof setTimeout>[] = [];
 
   @OnEvent({ name: 'ConfigInit', workers: [ImmichWorker.Microservices] })
   async onConfigInit({
@@ -95,13 +98,11 @@ export class AlbumGeneratorService extends BaseService {
     this.cronRepository.create({
       name: CronJob.AlbumGeneratorRun,
       expression: albumGenerator.cronExpression,
-      onTick: () =>
-        handlePromiseError(
-          this.jobRepository.queue({ name: JobName.AlbumGeneratorRun }),
-          this.logger,
-        ),
+      onTick: () => this.scheduleJitteredRun(albumGenerator.jitterMinutes),
       start: albumGenerator.enabled,
     });
+
+    this.scheduleExtraSurpriseRuns(albumGenerator.extraRunsPerWeek, albumGenerator.enabled);
   }
 
   @OnEvent({ name: 'ConfigUpdate', server: true })
@@ -115,6 +116,60 @@ export class AlbumGeneratorService extends BaseService {
       expression: albumGenerator.cronExpression,
       start: albumGenerator.enabled,
     });
+
+    this.clearPendingTimers();
+    this.scheduleExtraSurpriseRuns(albumGenerator.extraRunsPerWeek, albumGenerator.enabled);
+  }
+
+  private queueRunImmediate(reason: string) {
+    this.logger.debug(`AlbumGenerator queue (${reason})`);
+    handlePromiseError(this.jobRepository.queue({ name: JobName.AlbumGeneratorRun }), this.logger);
+  }
+
+  /** Delay the cron-triggered queue by a uniform random amount in
+   *  [0, jitterMinutes] minutes. Zero jitter just fires immediately. */
+  private scheduleJitteredRun(jitterMinutes: number) {
+    if (!jitterMinutes || jitterMinutes <= 0) {
+      this.queueRunImmediate('cron');
+      return;
+    }
+    const delayMs = Math.floor(Math.random() * jitterMinutes * 60_000);
+    const timer = setTimeout(() => {
+      this.pendingTimers = this.pendingTimers.filter((t) => t !== timer);
+      this.queueRunImmediate(`cron+jitter ${Math.round(delayMs / 60_000)}m`);
+    }, delayMs);
+    this.pendingTimers.push(timer);
+  }
+
+  /** Pre-schedule `n` extra random firings spread across the coming 7 days.
+   *  After each fires, a single replacement is re-rolled so the rolling
+   *  cadence stays stable. */
+  private scheduleExtraSurpriseRuns(perWeek: number, enabled: boolean) {
+    if (!enabled || !perWeek || perWeek <= 0) {
+      return;
+    }
+    const weekMs = 7 * 24 * 60 * 60 * 1000;
+    for (let i = 0; i < perWeek; i++) {
+      this.rollOneSurpriseRun(weekMs);
+    }
+  }
+
+  private rollOneSurpriseRun(weekMs: number) {
+    const delayMs = Math.floor(Math.random() * weekMs);
+    const timer = setTimeout(() => {
+      this.pendingTimers = this.pendingTimers.filter((t) => t !== timer);
+      this.queueRunImmediate('extra-weekly-surprise');
+      // Re-roll a replacement so the rolling cadence is steady.
+      this.rollOneSurpriseRun(weekMs);
+    }, delayMs);
+    this.pendingTimers.push(timer);
+  }
+
+  private clearPendingTimers() {
+    for (const t of this.pendingTimers) {
+      clearTimeout(t);
+    }
+    this.pendingTimers = [];
   }
 
   @OnJob({ name: JobName.AlbumGeneratorRun, queue: QueueName.BackgroundTask })
@@ -166,6 +221,7 @@ export class AlbumGeneratorService extends BaseService {
               cluster: pick,
               hints: terms.hints,
               ollama: albumGenerator.ollama,
+              audio: albumGenerator.audio,
               now,
             });
             usedAssetIds.push(...pick.assetIds);
@@ -241,6 +297,7 @@ export class AlbumGeneratorService extends BaseService {
       cluster: pick,
       hints: [trimmedHint],
       ollama: config.albumGenerator.ollama,
+      audio: config.albumGenerator.audio,
       now,
     });
     this.logger.log(
@@ -334,12 +391,29 @@ export class AlbumGeneratorService extends BaseService {
         await this.storageRepository.createOrOverwriteFile(subtitlePath, Buffer.from(subtitle, 'utf8'));
       }
 
-      const audioPath = audioConfig.enabled
-        ? await this.pickAudio({
+      // Prefer the LLM's editorial pick when present and the file still
+      // exists in the library; otherwise fall back to tag-based matching.
+      let audioPath: string | null = null;
+      if (audioConfig.enabled) {
+        if (storyData.audioFile) {
+          const candidate = join(audioConfig.libraryPath, storyData.audioFile);
+          try {
+            await this.storageRepository.stat(candidate);
+            audioPath = candidate;
+            this.logger.debug(`audio: LLM pick → ${storyData.audioFile}`);
+          } catch {
+            this.logger.debug(
+              `audio: LLM picked ${storyData.audioFile} but it's gone from the library — falling back`,
+            );
+          }
+        }
+        if (!audioPath) {
+          audioPath = await this.pickAudio({
             libraryPath: audioConfig.libraryPath,
             theme: storyData.theme ?? 'highlights',
-          })
-        : null;
+          });
+        }
+      }
 
       const opts = {
         ...DEFAULT_SLIDESHOW,
@@ -454,6 +528,24 @@ export class AlbumGeneratorService extends BaseService {
   }
 
   private static readonly AUDIO_EXTS = ['.mp3', '.m4a', '.aac', '.ogg', '.opus', '.wav', '.flac'];
+
+  /** List audio basenames in the library that follow the `<tags>__<name>.ext`
+   * convention. Used to pass the catalogue to the LLM so it can choose by
+   * filename — the LLM sees the embedded tag tokens. */
+  private async listAudioFilenames(libraryPath: string): Promise<string[]> {
+    let entries;
+    try {
+      entries = await this.storageRepository.readdirWithTypes(libraryPath);
+    } catch {
+      return [];
+    }
+    return entries
+      .filter((e) => e.isFile())
+      .map((e) => e.name)
+      .filter((name) =>
+        AlbumGeneratorService.AUDIO_EXTS.includes(name.slice(name.lastIndexOf('.')).toLowerCase()),
+      );
+  }
 
   private async pickAudio(args: { libraryPath: string; theme: string }): Promise<string | null> {
     let entries;
@@ -749,6 +841,7 @@ export class AlbumGeneratorService extends BaseService {
     cluster: AssetCluster;
     hints: string[];
     ollama: { endpoint: string; textModel: string; visionModel: string };
+    audio: { enabled: boolean; libraryPath: string; volume: number };
     now: Date;
   }): Promise<string> {
     const repIds = pickRepresentatives(args.cluster, LLM_INPUT_THUMBS);
@@ -762,11 +855,18 @@ export class AlbumGeneratorService extends BaseService {
     // picks where N is the planned video still count for this cluster.
     const plannedStills = videoStillCount(args.cluster.assetIds.length);
     const expectedTransitionCount = Math.max(0, plannedStills - 1);
+    // Available audio tracks the LLM can choose from (basenames only). We
+    // pass the whole filename so the embedded `<tags>__<name>` convention
+    // gives the model enough hint about mood.
+    const audioCandidates = args.audio.enabled
+      ? await this.listAudioFilenames(args.audio.libraryPath)
+      : [];
     const prompt = buildStoryPrompt({
       cluster: args.cluster,
       hints: args.hints,
       photoCount: args.cluster.assetIds.length,
       expectedTransitionCount,
+      audioCandidates,
     });
 
     const llmResult = await this.ollamaRepository.generateMemoryStory({
@@ -782,6 +882,14 @@ export class AlbumGeneratorService extends BaseService {
         `LLM transitions rejected (expected ${expectedTransitionCount}, got ${JSON.stringify(llmResult.transitions).slice(0, 200)})`,
       );
     }
+    // Validate the LLM's audio pick — must match a real file in the library.
+    const validatedAudioFile =
+      llmResult.audioFile && audioCandidates.includes(llmResult.audioFile)
+        ? llmResult.audioFile
+        : undefined;
+    if (llmResult.audioFile && !validatedAudioFile) {
+      this.logger.debug(`LLM audio pick rejected (not in library): ${llmResult.audioFile}`);
+    }
 
     const heroAssetId = repIds[Math.floor(repIds.length / 2)] ?? args.cluster.assetIds[0];
     // The cluster's primary theme is the bucketing key (one hint OR one theme
@@ -796,6 +904,7 @@ export class AlbumGeneratorService extends BaseService {
       hints: args.hints.length > 0 ? args.hints : undefined,
       heroAssetId,
       videoTransitions: validatedTransitions ?? undefined,
+      audioFile: validatedAudioFile,
       model: args.ollama.visionModel,
       generatedAt: args.now.toISOString(),
     };
@@ -848,8 +957,9 @@ function buildStoryPrompt(args: {
   hints: string[];
   photoCount: number;
   expectedTransitionCount: number;
+  audioCandidates: string[];
 }): string {
-  const { cluster, hints, photoCount, expectedTransitionCount } = args;
+  const { cluster, hints, photoCount, expectedTransitionCount, audioCandidates } = args;
   const startDate = cluster.startsAt.toISOString().slice(0, 10);
   const endDate = cluster.endsAt.toISOString().slice(0, 10);
   const dateRange = startDate === endDate ? startDate : `${startDate} to ${endDate}`;
@@ -883,19 +993,41 @@ function buildStoryPrompt(args: {
     '',
     'Editorial transitions: pick an ordered list of exactly',
     `${expectedTransitionCount} ffmpeg xfade transition names that match the mood of your story.`,
-    'Allowed (and only these):',
-    `  ${TRANSITION_POOL.join(', ')}`,
-    'Guidance: prefer slow types (`fade`, `fadeblack`, `fadewhite`, `dissolve`,',
-    '`smooth*`, `circleopen`) for calm / contemplative moments, and `slide*`,',
-    '`wipe*`, `radial`, `circleclose` for upbeat / energetic moments. Mix them',
-    'so the rhythm matches the arc of your story; avoid repeating the same',
-    'transition three times in a row.',
+    'Each transition is annotated with what it conveys — pick the right tool',
+    'for each cut, mixing scenarios so the rhythm matches the arc.',
+    'Allowed transitions:',
+    ...TRANSITION_POOL.map(
+      (t) => `  - ${t.name} — ${t.description} [scenarios: ${t.scenarios.join(', ')}]`,
+    ),
+    'Guidance: read the user\'s topic and the photos\' emotional content,',
+    'then pick transitions whose scenarios match. A warm family memory uses',
+    'fade / dissolve / smooth*; a bike-ride memory uses slide* / wipe* /',
+    'radial; a sunset reflection uses fadewhite / circleopen. Mix the',
+    'scenarios so the arc breathes; avoid the same transition three times',
+    'in a row.',
     '',
+    ...(audioCandidates.length > 0
+      ? [
+          '',
+          'Editorial audio: pick ONE background music track from this library',
+          'by filename. Filenames follow `<space-separated tags>__<name>.<ext>`',
+          '— use the tags to gauge mood and pick what best matches your story.',
+          'Available tracks (use the exact filename as shown):',
+          ...audioCandidates.slice(0, 60).map((f) => `  - ${f}`),
+          'If nothing fits or you genuinely have no preference, omit the field.',
+          '',
+        ]
+      : []),
     'Generate a JSON object with this exact shape:',
     '{',
     `  "title": "5-8 word evocative title that contains or clearly evokes \\"${requestedTopic}\\"",`,
     '  "story": "warm 60-100 word second-person narrative using \\"you\\"/\\"your\\". Anchor on the topic above. Reference specific visual details. Do not invent names of people. No preamble.",',
-    `  "transitions": [/* exactly ${expectedTransitionCount} strings from the allowed list */]`,
+    `  "transitions": [/* exactly ${expectedTransitionCount} strings from the allowed list */]${
+      audioCandidates.length > 0 ? ',' : ''
+    }`,
+    ...(audioCandidates.length > 0
+      ? ['  "audioFile": "exact filename from the audio library, or omit"']
+      : []),
     '}',
     '',
     'Output the JSON object only, nothing else.',

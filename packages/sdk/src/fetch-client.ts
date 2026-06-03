@@ -2282,6 +2282,10 @@ export type SystemConfigAlbumGeneratorDto = {
     cronExpression: string;
     /** Enabled */
     enabled: boolean;
+    /** Additional random firings per week on top of the main cron (0 = disabled) */
+    extraRunsPerWeek: number;
+    /** Forward random delay (minutes) added to each cron firing so memories feel like surprises */
+    jitterMinutes: number;
     ollama: SystemConfigAlbumGeneratorOllamaDto;
     /** Theme keywords fed to searchSmart when discovering memory candidates */
     themeVocabulary: string[];

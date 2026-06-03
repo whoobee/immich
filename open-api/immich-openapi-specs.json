@@ -1651,7 +1651,7 @@
         ]
       },
       "put": {
-        "description": "Set opt-in, max nightly memories, and hint list. Hints are soft directives — they bias both candidate selection (via CLIP search) and the LLM prompt.",
+        "description": "Set opt-in, max nightly memories, and hint list. Hints are soft directives \u2014 they bias both candidate selection (via CLIP search) and the LLM prompt.",
         "operationId": "updateAlbumGeneratorConfig",
         "parameters": [],
         "requestBody": {
@@ -1746,7 +1746,7 @@
     },
     "/album-generator/runs": {
       "post": {
-        "description": "Triggers a one-off generation for the authenticated user. The provided hint is used verbatim — persistent hints, the admin theme vocabulary, the maxPerNight cap, and the recently-used filter are all ignored. The pipeline runs asynchronously; the new memory appears on the Memories page when CLIP search + clustering + LLM + ffmpeg finish (typically 1–3 minutes).",
+        "description": "Triggers a one-off generation for the authenticated user. The provided hint is used verbatim \u2014 persistent hints, the admin theme vocabulary, the maxPerNight cap, and the recently-used filter are all ignored. The pipeline runs asynchronously; the new memory appears on the Memories page when CLIP search + clustering + LLM + ffmpeg finish (typically 1\u20133 minutes).",
         "operationId": "triggerOnDemand",
         "parameters": [],
         "requestBody": {
@@ -16110,7 +16110,7 @@
       "AlbumGeneratorOnDemandRequestDto": {
         "properties": {
           "hint": {
-            "description": "Free-form prompt — passed as the lone hint to CLIP search and the LLM story prompt",
+            "description": "Free-form prompt \u2014 passed as the lone hint to CLIP search and the LLM story prompt",
             "maxLength": 200,
             "minLength": 2,
             "type": "string"
@@ -16124,7 +16124,7 @@
       "AlbumGeneratorOnDemandResponseDto": {
         "properties": {
           "queued": {
-            "description": "Job accepted; check the Memories page in 1–3 minutes",
+            "description": "Job accepted; check the Memories page in 1\u20133 minutes",
             "enum": [
               true
             ],
@@ -24689,7 +24689,7 @@
             "type": "string"
           },
           "volume": {
-            "description": "Linear audio gain (0.0–1.0)",
+            "description": "Linear audio gain (0.0\u20131.0)",
             "maximum": 1,
             "minimum": 0,
             "type": "number"
@@ -24716,6 +24716,18 @@
             "description": "Enabled",
             "type": "boolean"
           },
+          "extraRunsPerWeek": {
+            "description": "Additional random firings per week on top of the main cron (0 = disabled)",
+            "maximum": 21,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "jitterMinutes": {
+            "description": "Forward random delay (minutes) added to each cron firing so memories feel like surprises",
+            "maximum": 360,
+            "minimum": 0,
+            "type": "integer"
+          },
           "ollama": {
             "$ref": "#/components/schemas/SystemConfigAlbumGeneratorOllamaDto"
           },
@@ -24731,6 +24743,8 @@
           "audio",
           "cronExpression",
           "enabled",
+          "extraRunsPerWeek",
+          "jitterMinutes",
           "ollama",
           "themeVocabulary"
         ],
@@ -26080,7 +26094,7 @@
             "type": "array"
           },
           "projectionType": {
-            "description": "Array of projection types for 360° content (e.g., \"EQUIRECTANGULAR\", \"CUBEFACE\", \"CYLINDRICAL\")",
+            "description": "Array of projection types for 360\u00b0 content (e.g., \"EQUIRECTANGULAR\", \"CUBEFACE\", \"CYLINDRICAL\")",
             "items": {
               "nullable": true,
               "type": "string"

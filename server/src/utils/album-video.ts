@@ -26,29 +26,119 @@ export type SlideshowOptions = {
 };
 
 /**
- * Tasteful subset of ffmpeg xfade transitions. Order matters — we walk this
- * list deterministically per video, starting from `transitionSeed` and
- * stepping by a large prime so consecutive segments don't share a flavour.
+ * Tasteful subset of ffmpeg xfade transitions, annotated with a short
+ * description and a set of mood/scenario tags so the LLM can choose by
+ * intent ("warm, contemplative" → fadewhite, smoothup) rather than by
+ * shuffle. The string keys (`name`) are the only thing ffmpeg sees.
+ *
+ * Scenario tag vocabulary the LLM is told to use:
+ *   - scenic:        landscapes, slow pans, panoramic mood
+ *   - warm:          family, intimate, golden-hour feeling
+ *   - contemplative: reflective, quiet, meditative
+ *   - nostalgic:     memory-album feel, soft handoff between moments
+ *   - action:        sports, motion, kids running, bikes
+ *   - energetic:     parties, celebrations, kinetic mood
+ *   - playful:       whimsical, lighthearted
+ *   - cinematic:     dramatic reveal or close
+ *   - urban:         city, street, architectural
+ *   - natural:       outdoors, hikes, forests, gardens
  */
-export const TRANSITION_POOL: ReadonlyArray<string> = [
-  'fade',
-  'fadeblack',
-  'fadewhite',
-  'dissolve',
-  'slideleft',
-  'slideright',
-  'slideup',
-  'slidedown',
-  'smoothleft',
-  'smoothright',
-  'smoothup',
-  'smoothdown',
-  'circleopen',
-  'circleclose',
-  'radial',
-  'wipeleft',
-  'wiperight',
+export type TransitionEntry = {
+  name: string;
+  description: string;
+  scenarios: ReadonlyArray<string>;
+};
+
+export const TRANSITION_POOL: ReadonlyArray<TransitionEntry> = [
+  {
+    name: 'fade',
+    description: 'gentle cross-fade — the most universal calm transition',
+    scenarios: ['scenic', 'warm', 'contemplative', 'nostalgic'],
+  },
+  {
+    name: 'fadeblack',
+    description: 'fade through black — cinematic chapter break',
+    scenarios: ['contemplative', 'cinematic', 'nostalgic'],
+  },
+  {
+    name: 'fadewhite',
+    description: 'fade through white — bright, ethereal, golden-hour',
+    scenarios: ['warm', 'scenic', 'contemplative'],
+  },
+  {
+    name: 'dissolve',
+    description: 'pixel dissolve — soft memory-album handoff',
+    scenarios: ['nostalgic', 'warm', 'contemplative'],
+  },
+  {
+    name: 'slideleft',
+    description: 'incoming photo slides in from the right',
+    scenarios: ['action', 'energetic', 'urban'],
+  },
+  {
+    name: 'slideright',
+    description: 'incoming photo slides in from the left',
+    scenarios: ['action', 'energetic', 'urban'],
+  },
+  {
+    name: 'slideup',
+    description: 'incoming photo slides up — forward momentum',
+    scenarios: ['action', 'energetic', 'playful'],
+  },
+  {
+    name: 'slidedown',
+    description: 'incoming photo slides down — descending mood',
+    scenarios: ['contemplative', 'nostalgic'],
+  },
+  {
+    name: 'smoothleft',
+    description: 'softened horizontal slide — gentler than slideleft',
+    scenarios: ['scenic', 'warm', 'natural'],
+  },
+  {
+    name: 'smoothright',
+    description: 'softened horizontal slide — gentler than slideright',
+    scenarios: ['scenic', 'warm', 'natural'],
+  },
+  {
+    name: 'smoothup',
+    description: 'softened upward slide — graceful',
+    scenarios: ['scenic', 'warm', 'natural', 'contemplative'],
+  },
+  {
+    name: 'smoothdown',
+    description: 'softened downward slide — graceful',
+    scenarios: ['contemplative', 'nostalgic'],
+  },
+  {
+    name: 'circleopen',
+    description: 'circular iris opens to reveal — gentle, lens-like',
+    scenarios: ['warm', 'cinematic', 'nostalgic'],
+  },
+  {
+    name: 'circleclose',
+    description: 'circular iris closes — dramatic chapter close',
+    scenarios: ['cinematic', 'contemplative'],
+  },
+  {
+    name: 'radial',
+    description: 'sweeping radial wipe — kinetic and modern',
+    scenarios: ['action', 'energetic', 'urban', 'playful'],
+  },
+  {
+    name: 'wipeleft',
+    description: 'hard wipe from right to left — punchy',
+    scenarios: ['action', 'energetic', 'urban'],
+  },
+  {
+    name: 'wiperight',
+    description: 'hard wipe from left to right — punchy',
+    scenarios: ['action', 'energetic', 'urban'],
+  },
 ];
+
+/** Allowed xfade names — convenience for validators. */
+export const TRANSITION_NAMES: ReadonlyArray<string> = TRANSITION_POOL.map((t) => t.name);
 
 /**
  * Validate a list of transition names against the allowed pool. Returns the
@@ -63,7 +153,7 @@ export function validateTransitions(
 ): string[] | null {
   if (!Array.isArray(picks)) return null;
   if (expectedCount != null && picks.length !== expectedCount) return null;
-  const allowed = new Set<string>(TRANSITION_POOL);
+  const allowed = new Set<string>(TRANSITION_NAMES);
   for (const p of picks) {
     if (typeof p !== 'string' || !allowed.has(p)) return null;
   }
@@ -77,7 +167,7 @@ export function pickTransition(seed: number, index: number): string {
   // idea here: they overflow uint32 and collapse the residue mod the pool size.
   const n = TRANSITION_POOL.length;
   const idx = ((seed % n) + index * 7) % n;
-  return TRANSITION_POOL[(idx + n) % n];
+  return TRANSITION_POOL[(idx + n) % n].name;
 }
 
 /** Stable per-cluster seed from a UUID string (first 8 hex chars as a uint32). */

@@ -516,6 +516,10 @@ export type AiStoryData = {
    *  present, the video compose uses these verbatim instead of the seeded
    *  picker. Validated against the allowed pool at write time. */
   videoTransitions?: string[];
+  /** Audio file (basename only) chosen by the LLM from the available
+   *  library. Resolved to a full path in handleVideoCompose; falls back to
+   *  pickAudioForTheme when missing or no longer present. */
+  audioFile?: string;
   model?: string;
   generatedAt: string;
 };

@@ -168,6 +168,15 @@ export type SystemConfig = {
   albumGenerator: {
     enabled: boolean;
     cronExpression: string;
+    /** Forward jitter in minutes added on top of each cron firing so the
+     *  actual run time is unpredictable within [cron, cron+jitter]. Helps
+     *  the memories feel like serendipitous surprises rather than a
+     *  predictable nightly batch. 0 disables jitter. */
+    jitterMinutes: number;
+    /** Optional extra random firings spread across each week, on top of
+     *  the main cron. Each extra fire is scheduled at a uniformly random
+     *  moment in the next 7 days. Re-rolled after each fire. 0 disables. */
+    extraRunsPerWeek: number;
     ollama: {
       endpoint: string;
       textModel: string;
@@ -399,6 +408,8 @@ export const defaults = Object.freeze<SystemConfig>({
   albumGenerator: {
     enabled: false,
     cronExpression: CronExpression.EVERY_DAY_AT_2AM,
+    jitterMinutes: 60,
+    extraRunsPerWeek: 0,
     ollama: {
       endpoint: 'http://host.docker.internal:11434',
       textModel: 'llama3.1:8b',
