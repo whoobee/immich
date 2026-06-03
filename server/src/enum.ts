@@ -85,6 +85,8 @@ export const AssetOrderBySchema = z.enum(AssetOrderBy).describe('Asset sorting p
 export enum MemoryType {
   /** pictures taken on this day X years ago */
   OnThisDay = 'on_this_day',
+  /** autonomously generated story + album from clustered photos */
+  AiStory = 'ai_story',
 }
 
 export const MemoryTypeSchema = z.enum(MemoryType).describe('Memory type').meta({ id: 'MemoryType' });
@@ -341,12 +343,14 @@ export enum SystemMetadataKey {
   SystemFlags = 'system-flags',
   VersionCheckState = 'version-check-state',
   License = 'license',
+  AlbumGeneratorState = 'album-generator-state',
 }
 
 export enum UserMetadataKey {
   Preferences = 'preferences',
   License = 'license',
   Onboarding = 'onboarding',
+  AlbumGenerator = 'album-generator',
 }
 
 export const UserMetadataKeySchema = z
@@ -405,6 +409,7 @@ export enum ManualJobName {
   MemoryCleanup = 'memory-cleanup',
   MemoryCreate = 'memory-create',
   BackupDatabase = 'backup-database',
+  AlbumGeneratorRun = 'album-generator-run',
 }
 
 export const ManualJobNameSchema = z.enum(ManualJobName).describe('Manual job name').meta({ id: 'ManualJobName' });
@@ -828,6 +833,10 @@ export enum JobName {
   MemoryCleanup = 'MemoryCleanup',
   MemoryGenerate = 'MemoryGenerate',
 
+  AlbumGeneratorRun = 'AlbumGeneratorRun',
+  AlbumGeneratorOnDemand = 'AlbumGeneratorOnDemand',
+  MemoryVideoCompose = 'MemoryVideoCompose',
+
   NotificationsCleanup = 'NotificationsCleanup',
 
   NotifyUserSignup = 'NotifyUserSignup',
@@ -919,6 +928,8 @@ export enum DatabaseLock {
   MemoryCreation = 777,
   VersionCheck = 800,
   HlsSessionCleanup = 850,
+  AlbumGeneratorRun = 888,
+  AlbumGeneratorCronLease = 889,
 }
 
 export enum MaintenanceAction {
@@ -1114,6 +1125,7 @@ export enum CronJob {
   LibraryScan = 'LibraryScan',
   NightlyJobs = 'NightlyJobs',
   VersionCheck = 'VersionCheck',
+  AlbumGeneratorRun = 'AlbumGeneratorRun',
 }
 
 export enum ApiTag {
@@ -1133,6 +1145,7 @@ export enum ApiTag {
   Maintenance = 'Maintenance (admin)',
   Map = 'Map',
   Memories = 'Memories',
+  AlbumGenerator = 'Album Generator',
   Notifications = 'Notifications',
   NotificationsAdmin = 'Notifications (admin)',
   Partners = 'Partners',

@@ -165,6 +165,24 @@ export type SystemConfig = {
       enabled: boolean;
     };
   };
+  albumGenerator: {
+    enabled: boolean;
+    cronExpression: string;
+    ollama: {
+      endpoint: string;
+      textModel: string;
+      visionModel: string;
+    };
+    themeVocabulary: string[];
+    audio: {
+      enabled: boolean;
+      /** Server path containing the audio library — files follow
+       *  `<tags>__<name>.<ext>` (see album-video.ts:parseAudioTags). */
+      libraryPath: string;
+      /** Linear gain multiplier applied to the chosen track. */
+      volume: number;
+    };
+  };
   notifications: {
     smtp: {
       enabled: boolean;
@@ -376,6 +394,36 @@ export const defaults = Object.freeze<SystemConfig>({
     },
     watch: {
       enabled: false,
+    },
+  },
+  albumGenerator: {
+    enabled: false,
+    cronExpression: CronExpression.EVERY_DAY_AT_2AM,
+    ollama: {
+      endpoint: 'http://host.docker.internal:11434',
+      textModel: 'llama3.1:8b',
+      visionModel: 'llava:13b',
+    },
+    themeVocabulary: [
+      'beach',
+      'mountain',
+      'forest',
+      'sunset',
+      'city skyline',
+      'food',
+      'pets',
+      'family gathering',
+      'concert',
+      'road trip',
+      'snow',
+      'flowers',
+      'architecture',
+      'street scene',
+    ],
+    audio: {
+      enabled: true,
+      libraryPath: '/data/audio-library',
+      volume: 0.7,
     },
   },
   server: {

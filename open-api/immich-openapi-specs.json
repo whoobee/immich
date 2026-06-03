@@ -1611,6 +1611,189 @@
         "x-immich-state": "Stable"
       }
     },
+    "/album-generator/config": {
+      "get": {
+        "description": "Returns the opt-in flag, maxPerNight cap, and persistent hint list. Returns sensible defaults for users that have never set these.",
+        "operationId": "getAlbumGeneratorConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlbumGeneratorUserConfigDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Retrieve the current user's AI album generator settings",
+        "tags": [
+          "Album Generator"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v2",
+            "state": "Added"
+          }
+        ]
+      },
+      "put": {
+        "description": "Set opt-in, max nightly memories, and hint list. Hints are soft directives — they bias both candidate selection (via CLIP search) and the LLM prompt.",
+        "operationId": "updateAlbumGeneratorConfig",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlbumGeneratorUserConfigDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlbumGeneratorUserConfigDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Update the current user's AI album generator settings",
+        "tags": [
+          "Album Generator"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v2",
+            "state": "Added"
+          }
+        ]
+      }
+    },
+    "/album-generator/memories/{id}/video": {
+      "get": {
+        "description": "Returns an mp4 stream of the slideshow video generated for an AI memory. Available only after the MemoryVideoCompose job has completed.",
+        "operationId": "getMemoryAiVideo",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Stream the composed AI memory video",
+        "tags": [
+          "Album Generator"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v2",
+            "state": "Added"
+          }
+        ],
+        "x-immich-permission": "memory.read"
+      }
+    },
+    "/album-generator/runs": {
+      "post": {
+        "description": "Triggers a one-off generation for the authenticated user. The provided hint is used verbatim — persistent hints, the admin theme vocabulary, the maxPerNight cap, and the recently-used filter are all ignored. The pipeline runs asynchronously; the new memory appears on the Memories page when CLIP search + clustering + LLM + ffmpeg finish (typically 1–3 minutes).",
+        "operationId": "triggerOnDemand",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlbumGeneratorOnDemandRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlbumGeneratorOnDemandResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Queue an on-demand AI memory for a custom hint",
+        "tags": [
+          "Album Generator"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v2",
+            "state": "Added"
+          }
+        ]
+      }
+    },
     "/albums": {
       "get": {
         "description": "Retrieve a list of albums available to the authenticated user.",
@@ -15690,6 +15873,10 @@
       "description": "A memory is a specialized collection of assets with dedicated viewing implementations in the web and mobile clients. A memory includes fields related to visibility and are automatically generated per user via a background job."
     },
     {
+      "name": "Album Generator",
+      "description": "Per-user settings and streaming endpoint for the AI album generator, which autonomously creates story-driven memory albums and slideshow videos from clustered photos on a nightly schedule."
+    },
+    {
       "name": "Notifications",
       "description": "A notification is a specialized message sent to users to inform them of important events. Currently, these notifications are only shown in the Immich web application."
     },
@@ -15917,6 +16104,65 @@
         },
         "required": [
           "isOnboarded"
+        ],
+        "type": "object"
+      },
+      "AlbumGeneratorOnDemandRequestDto": {
+        "properties": {
+          "hint": {
+            "description": "Free-form prompt — passed as the lone hint to CLIP search and the LLM story prompt",
+            "maxLength": 200,
+            "minLength": 2,
+            "type": "string"
+          }
+        },
+        "required": [
+          "hint"
+        ],
+        "type": "object"
+      },
+      "AlbumGeneratorOnDemandResponseDto": {
+        "properties": {
+          "queued": {
+            "description": "Job accepted; check the Memories page in 1–3 minutes",
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "queued"
+        ],
+        "type": "object"
+      },
+      "AlbumGeneratorUserConfigDto": {
+        "properties": {
+          "hints": {
+            "description": "Soft directives passed to the LLM and used as searchSmart queries when discovering memory candidates",
+            "items": {
+              "maxLength": 80,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "type": "array"
+          },
+          "maxPerNight": {
+            "description": "Maximum number of AI memories to create for this user per nightly run",
+            "maximum": 10,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "optIn": {
+            "description": "Whether this user opts into nightly AI memory generation",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "hints",
+          "maxPerNight",
+          "optIn"
         ],
         "type": "object"
       },
@@ -18494,6 +18740,9 @@
           "HlsSessionCleanup",
           "MemoryCleanup",
           "MemoryGenerate",
+          "AlbumGeneratorRun",
+          "AlbumGeneratorOnDemand",
+          "MemoryVideoCompose",
           "NotificationsCleanup",
           "NotifyUserSignup",
           "NotifyAlbumInvite",
@@ -18891,7 +19140,8 @@
           "user-cleanup",
           "memory-cleanup",
           "memory-create",
-          "backup-database"
+          "backup-database",
+          "album-generator-run"
         ],
         "type": "string"
       },
@@ -19190,7 +19440,8 @@
       "MemoryType": {
         "description": "Memory type",
         "enum": [
-          "on_this_day"
+          "on_this_day",
+          "ai_story"
         ],
         "type": "string"
       },
@@ -24427,6 +24678,87 @@
         ],
         "type": "object"
       },
+      "SystemConfigAlbumGeneratorAudioDto": {
+        "properties": {
+          "enabled": {
+            "description": "Mix background audio into composed memory videos",
+            "type": "boolean"
+          },
+          "libraryPath": {
+            "description": "Server-side directory containing CC0 audio files using the `<tags>__<name>.<ext>` convention",
+            "type": "string"
+          },
+          "volume": {
+            "description": "Linear audio gain (0.0–1.0)",
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "enabled",
+          "libraryPath",
+          "volume"
+        ],
+        "type": "object"
+      },
+      "SystemConfigAlbumGeneratorDto": {
+        "properties": {
+          "audio": {
+            "$ref": "#/components/schemas/SystemConfigAlbumGeneratorAudioDto"
+          },
+          "cronExpression": {
+            "description": "Cron expression",
+            "pattern": "(((\\d+,)+\\d+|(\\d+(\\/|-)\\d+)|\\d+|\\*) ?){5,7}",
+            "type": "string"
+          },
+          "enabled": {
+            "description": "Enabled",
+            "type": "boolean"
+          },
+          "ollama": {
+            "$ref": "#/components/schemas/SystemConfigAlbumGeneratorOllamaDto"
+          },
+          "themeVocabulary": {
+            "description": "Theme keywords fed to searchSmart when discovering memory candidates",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "audio",
+          "cronExpression",
+          "enabled",
+          "ollama",
+          "themeVocabulary"
+        ],
+        "type": "object"
+      },
+      "SystemConfigAlbumGeneratorOllamaDto": {
+        "properties": {
+          "endpoint": {
+            "description": "Ollama API endpoint",
+            "format": "uri",
+            "type": "string"
+          },
+          "textModel": {
+            "description": "Text model used for naming when vision is unavailable",
+            "type": "string"
+          },
+          "visionModel": {
+            "description": "Vision model used for thumbnail-aware story generation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "endpoint",
+          "textModel",
+          "visionModel"
+        ],
+        "type": "object"
+      },
       "SystemConfigBackupsDto": {
         "properties": {
           "database": {
@@ -24441,6 +24773,9 @@
       "SystemConfigDto": {
         "description": "System configuration",
         "properties": {
+          "albumGenerator": {
+            "$ref": "#/components/schemas/SystemConfigAlbumGeneratorDto"
+          },
           "backup": {
             "$ref": "#/components/schemas/SystemConfigBackupsDto"
           },
@@ -24506,6 +24841,7 @@
           }
         },
         "required": [
+          "albumGenerator",
           "backup",
           "ffmpeg",
           "image",
@@ -26346,7 +26682,8 @@
         "enum": [
           "preferences",
           "license",
-          "onboarding"
+          "onboarding",
+          "album-generator"
         ],
         "type": "string"
       },

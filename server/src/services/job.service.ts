@@ -34,6 +34,10 @@ const asJobItem = (dto: JobCreateDto): JobItem => {
       return { name: JobName.DatabaseBackup };
     }
 
+    case ManualJobName.AlbumGeneratorRun: {
+      return { name: JobName.AlbumGeneratorRun };
+    }
+
     default: {
       throw new BadRequestException('Invalid job name');
     }

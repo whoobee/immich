@@ -381,6 +381,11 @@ export type JobItem =
   | { name: JobName.MemoryCleanup; data?: IBaseJob }
   | { name: JobName.MemoryGenerate; data?: IBaseJob }
 
+  // AI Album Generator
+  | { name: JobName.AlbumGeneratorRun; data?: IBaseJob }
+  | { name: JobName.AlbumGeneratorOnDemand; data: { userId: string; hint: string } }
+  | { name: JobName.MemoryVideoCompose; data: IEntityJob }
+
   // Filesystem
   | { name: JobName.FileDelete; data: IDeleteFilesJob }
 
@@ -496,8 +501,28 @@ export type StorageAsset = {
 
 export type OnThisDayData = { year: number };
 
+export type AiStoryData = {
+  title: string;
+  story: string;
+  theme?: string;
+  hints?: string[];
+  heroAssetId?: string;
+  /** Path (server-side) to the composed memory video. Played via a dedicated
+   *  streaming endpoint rather than a regular Asset for now. */
+  videoFilePath?: string;
+  /** Duration of the composed video in seconds. */
+  videoDurationSeconds?: number;
+  /** Ordered xfade transition names chosen by the LLM (one per cut). When
+   *  present, the video compose uses these verbatim instead of the seeded
+   *  picker. Validated against the allowed pool at write time. */
+  videoTransitions?: string[];
+  model?: string;
+  generatedAt: string;
+};
+
 export interface MemoryData {
   [MemoryType.OnThisDay]: OnThisDayData;
+  [MemoryType.AiStory]: AiStoryData;
 }
 
 export type VersionCheckMetadata = { checkedAt: string; releaseVersion: string };
@@ -511,6 +536,12 @@ export type MemoriesState = {
 };
 export type MediaLocation = { location: string };
 
+export type AlbumGeneratorState = {
+  /** per-user run state — capped FIFO of recently-used asset IDs avoids the
+   * same photo appearing in back-to-back AI memories */
+  perUser: Record<string, { recentlyUsedAssetIds: string[]; lastRunAt?: string }>;
+};
+
 export interface SystemMetadata extends Record<SystemMetadataKey, Record<string, any>> {
   [SystemMetadataKey.AdminOnboarding]: { isOnboarded: boolean };
   [SystemMetadataKey.FacialRecognitionState]: { lastRun?: string };
@@ -522,6 +553,7 @@ export interface SystemMetadata extends Record<SystemMetadataKey, Record<string,
   [SystemMetadataKey.SystemFlags]: DeepPartial<SystemFlags>;
   [SystemMetadataKey.VersionCheckState]: VersionCheckMetadata;
   [SystemMetadataKey.MemoriesState]: MemoriesState;
+  [SystemMetadataKey.AlbumGeneratorState]: AlbumGeneratorState;
 }
 
 export type UserPreferences = {
@@ -574,10 +606,18 @@ export type UserMetadataItem<T extends keyof UserMetadata = UserMetadataKey> = {
   value: UserMetadata[T];
 };
 
+export type AlbumGeneratorUserConfig = {
+  optIn: boolean;
+  maxPerNight: number;
+  /** soft directives passed to the LLM and used as searchSmart queries */
+  hints: string[];
+};
+
 export interface UserMetadata extends Record<UserMetadataKey, Record<string, any>> {
   [UserMetadataKey.Preferences]: DeepPartial<UserPreferences>;
   [UserMetadataKey.License]: { licenseKey: string; activationKey: string; activatedAt: string };
   [UserMetadataKey.Onboarding]: { isOnboarded: boolean };
+  [UserMetadataKey.AlbumGenerator]: AlbumGeneratorUserConfig;
 }
 
 export type MaybeDehydrated<T> = T | ShallowDehydrateObject<T>;

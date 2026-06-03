@@ -501,6 +501,123 @@ export class AssetRepository {
     return this.db.selectFrom('asset').selectAll('asset').where('asset.id', '=', anyUuid(ids)).execute();
   }
 
+  /** Cheap candidates for the AI album generator — Timeline-visible image
+   * assets owned by `ownerId` with a localDateTime in [since, now], newest
+   * first, capped at `limit`. Returns just enough for time+geo clustering. */
+  getForAlbumGeneratorRecent(
+    ownerId: string,
+    since: Date,
+    limit: number,
+  ): Promise<
+    Array<{
+      id: string;
+      localDateTime: Date;
+      latitude: number | null;
+      longitude: number | null;
+      city: string | null;
+      country: string | null;
+    }>
+  > {
+    return this.db
+      .selectFrom('asset')
+      .innerJoin('asset_exif', 'asset_exif.assetId', 'asset.id')
+      .select([
+        'asset.id as id',
+        'asset.localDateTime as localDateTime',
+        'asset_exif.latitude as latitude',
+        'asset_exif.longitude as longitude',
+        'asset_exif.city as city',
+        'asset_exif.country as country',
+      ])
+      .where('asset.ownerId', '=', asUuid(ownerId))
+      .where('asset.deletedAt', 'is', null)
+      .where('asset.visibility', '=', AssetVisibility.Timeline)
+      .where('asset.type', '=', AssetType.Image)
+      .where('asset.localDateTime', '>=', since)
+      .orderBy('asset.localDateTime', 'desc')
+      .limit(limit)
+      .execute() as unknown as Promise<
+      Array<{
+        id: string;
+        localDateTime: Date;
+        latitude: number | null;
+        longitude: number | null;
+        city: string | null;
+        country: string | null;
+      }>
+    >;
+  }
+
+  /** Same-day-of-year anniversary candidates for the AI album generator —
+   * Timeline-visible image assets owned by `ownerId` taken on the given
+   * month/day in years up to `yearsBack` ago, capped at `limit`. */
+  getForAlbumGeneratorAnniversary(
+    ownerId: string,
+    month: number,
+    day: number,
+    yearsBack: number,
+    limit: number,
+  ): Promise<
+    Array<{
+      id: string;
+      localDateTime: Date;
+      latitude: number | null;
+      longitude: number | null;
+      city: string | null;
+      country: string | null;
+    }>
+  > {
+    return this.db
+      .selectFrom('asset')
+      .innerJoin('asset_exif', 'asset_exif.assetId', 'asset.id')
+      .select([
+        'asset.id as id',
+        'asset.localDateTime as localDateTime',
+        'asset_exif.latitude as latitude',
+        'asset_exif.longitude as longitude',
+        'asset_exif.city as city',
+        'asset_exif.country as country',
+      ])
+      .where('asset.ownerId', '=', asUuid(ownerId))
+      .where('asset.deletedAt', 'is', null)
+      .where('asset.visibility', '=', AssetVisibility.Timeline)
+      .where('asset.type', '=', AssetType.Image)
+      .where(sql`extract(month from "asset"."localDateTime")`, '=', month)
+      .where(sql`extract(day from "asset"."localDateTime")`, '=', day)
+      .where(
+        sql`"asset"."localDateTime"`,
+        '<',
+        sql`date_trunc('day', now()) - interval '12 hours'`,
+      )
+      .where(
+        sql`"asset"."localDateTime"`,
+        '>=',
+        sql`now() - (${yearsBack} || ' years')::interval`,
+      )
+      .orderBy('asset.localDateTime', 'desc')
+      .limit(limit)
+      .execute() as unknown as Promise<
+      Array<{
+        id: string;
+        localDateTime: Date;
+        latitude: number | null;
+        longitude: number | null;
+        city: string | null;
+        country: string | null;
+      }>
+    >;
+  }
+
+  getPreviewFilesByIds(ids: string[]): Promise<Array<{ id: string; path: string }>> {
+    return this.db
+      .selectFrom('asset')
+      .innerJoin('asset_file', 'asset_file.assetId', 'asset.id')
+      .select(['asset.id as id', 'asset_file.path as path'])
+      .where('asset.id', '=', anyUuid(ids))
+      .where('asset_file.type', '=', AssetFileType.Preview)
+      .execute();
+  }
+
   @GenerateSql({ params: [[DummyValue.UUID]] })
   @ChunkedArray()
   getByIdsWithAllRelationsButStacks(ids: string[]) {

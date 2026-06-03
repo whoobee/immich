@@ -34,6 +34,7 @@ import { MoveRepository } from 'src/repositories/move.repository';
 import { NotificationRepository } from 'src/repositories/notification.repository';
 import { OAuthRepository } from 'src/repositories/oauth.repository';
 import { OcrRepository } from 'src/repositories/ocr.repository';
+import { OllamaRepository } from 'src/repositories/ollama.repository';
 import { PartnerRepository } from 'src/repositories/partner.repository';
 import { PersonRepository } from 'src/repositories/person.repository';
 import { PluginRepository } from 'src/repositories/plugin.repository';
@@ -92,6 +93,7 @@ export const BASE_SERVICE_DEPENDENCIES = [
   NotificationRepository,
   OAuthRepository,
   OcrRepository,
+  OllamaRepository,
   PartnerRepository,
   PersonRepository,
   PluginRepository,
@@ -151,6 +153,7 @@ export class BaseService {
     protected notificationRepository: NotificationRepository,
     protected oauthRepository: OAuthRepository,
     protected ocrRepository: OcrRepository,
+    protected ollamaRepository: OllamaRepository,
     protected partnerRepository: PartnerRepository,
     protected personRepository: PersonRepository,
     protected pluginRepository: PluginRepository,
@@ -219,6 +222,7 @@ export class BaseService {
       ctx.notificationRepository,
       ctx.oauthRepository,
       ctx.ocrRepository,
+      ctx.ollamaRepository,
       ctx.partnerRepository,
       ctx.personRepository,
       ctx.pluginRepository,

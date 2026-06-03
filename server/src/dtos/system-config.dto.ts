@@ -121,6 +121,36 @@ const SystemConfigLibrarySchema = z
   .object({ scan: SystemConfigLibraryScanSchema, watch: SystemConfigLibraryWatchSchema })
   .meta({ id: 'SystemConfigLibraryDto' });
 
+const SystemConfigAlbumGeneratorOllamaSchema = z
+  .object({
+    endpoint: z.string().url().describe('Ollama API endpoint'),
+    textModel: z.string().describe('Text model used for naming when vision is unavailable'),
+    visionModel: z.string().describe('Vision model used for thumbnail-aware story generation'),
+  })
+  .meta({ id: 'SystemConfigAlbumGeneratorOllamaDto' });
+
+const SystemConfigAlbumGeneratorAudioSchema = z
+  .object({
+    enabled: configBool.describe('Mix background audio into composed memory videos'),
+    libraryPath: z
+      .string()
+      .describe('Server-side directory containing CC0 audio files using the `<tags>__<name>.<ext>` convention'),
+    volume: z.coerce.number().min(0).max(1).describe('Linear audio gain (0.0–1.0)'),
+  })
+  .meta({ id: 'SystemConfigAlbumGeneratorAudioDto' });
+
+const SystemConfigAlbumGeneratorSchema = z
+  .object({
+    enabled: configBool.describe('Enabled'),
+    cronExpression: cronExpressionSchema,
+    ollama: SystemConfigAlbumGeneratorOllamaSchema,
+    themeVocabulary: z
+      .array(z.string())
+      .describe('Theme keywords fed to searchSmart when discovering memory candidates'),
+    audio: SystemConfigAlbumGeneratorAudioSchema,
+  })
+  .meta({ id: 'SystemConfigAlbumGeneratorDto' });
+
 const SystemConfigLoggingSchema = z
   .object({
     enabled: configBool.describe('Enabled'),
@@ -378,6 +408,7 @@ export const SystemConfigSchema = z
     trash: SystemConfigTrashSchema,
     theme: SystemConfigThemeSchema,
     library: SystemConfigLibrarySchema,
+    albumGenerator: SystemConfigAlbumGeneratorSchema,
     notifications: SystemConfigNotificationsSchema,
     templates: SystemConfigTemplatesSchema,
     server: SystemConfigServerSchema,

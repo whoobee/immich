@@ -85,7 +85,7 @@
     memoryManager.memories.map((memory) => ({
       id: memory.id,
       title: $memoryLaneTitle(memory),
-      href: Route.memories({ id: memory.assets[0].id }),
+      href: Route.memories({ id: memory.assets[0].id, memoryId: memory.id }),
       alt: $t('memory_lane_title', { values: { title: $getAltText(toTimelineAsset(memory.assets[0])) } }),
       src: getAssetMediaUrl({ id: memory.assets[0].id }),
     })),
@@ -103,7 +103,25 @@
     withStacked
   >
     {#if authManager.preferences.memories.enabled}
-      <ImageCarousel {items} />
+      <ImageCarousel {items}>
+        {#snippet child(item)}
+          <a
+            class="item-card relative me-2 inline-block aspect-3/4 h-54 rounded-xl last:me-0 max-md:h-37.5 md:me-4 md:aspect-4/3 xl:aspect-video"
+            href={item.href}
+          >
+            <img class="h-full w-full rounded-xl object-cover" src={item.src} alt={item.alt ?? item.title} draggable="false" />
+            <div
+              class="absolute start-0 top-0 h-full w-full rounded-xl bg-linear-to-t from-black/60 via-black/10 to-transparent transition-all hover:bg-black/20"
+            ></div>
+            <p
+              class="absolute start-3 end-3 bottom-2 line-clamp-2 text-base font-medium text-white drop-shadow max-md:text-xs"
+              title={item.title}
+            >
+              {item.title}
+            </p>
+          </a>
+        {/snippet}
+      </ImageCarousel>
     {/if}
     {#snippet empty()}
       <EmptyPlaceholder text={$t('no_assets_message')} onClick={() => openFileUploadDialog()} class="mx-auto mt-10" />

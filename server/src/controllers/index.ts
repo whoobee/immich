@@ -1,4 +1,5 @@
 import { ActivityController } from 'src/controllers/activity.controller';
+import { AlbumGeneratorController } from 'src/controllers/album-generator.controller';
 import { AlbumController } from 'src/controllers/album.controller';
 import { ApiKeyController } from 'src/controllers/api-key.controller';
 import { AppController } from 'src/controllers/app.controller';
@@ -43,6 +44,7 @@ export const controllers = [
   ApiKeyController,
   ActivityController,
   AlbumController,
+  AlbumGeneratorController,
   AppController,
   AssetController,
   AssetMediaController,

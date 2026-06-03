@@ -442,6 +442,22 @@ export type AssetStatsResponseDto = {
     /** Number of videos */
     videos: number;
 };
+export type AlbumGeneratorUserConfigDto = {
+    /** Soft directives passed to the LLM and used as searchSmart queries when discovering memory candidates */
+    hints: string[];
+    /** Maximum number of AI memories to create for this user per nightly run */
+    maxPerNight: number;
+    /** Whether this user opts into nightly AI memory generation */
+    optIn: boolean;
+};
+export type AlbumGeneratorOnDemandRequestDto = {
+    /** Free-form prompt — passed as the lone hint to CLIP search and the LLM story prompt */
+    hint: string;
+};
+export type AlbumGeneratorOnDemandResponseDto = {
+    /** Job accepted; check the Memories page in 1–3 minutes */
+    queued: true;
+};
 export type AlbumUserResponseDto = {
     role: AlbumUserRole;
     user: UserResponseDto;
@@ -2244,6 +2260,32 @@ export type SyncStreamDto = {
     /** Sync request types */
     types: SyncRequestType[];
 };
+export type SystemConfigAlbumGeneratorAudioDto = {
+    /** Mix background audio into composed memory videos */
+    enabled: boolean;
+    /** Server-side directory containing CC0 audio files using the `<tags>__<name>.<ext>` convention */
+    libraryPath: string;
+    /** Linear audio gain (0.0–1.0) */
+    volume: number;
+};
+export type SystemConfigAlbumGeneratorOllamaDto = {
+    /** Ollama API endpoint */
+    endpoint: string;
+    /** Text model used for naming when vision is unavailable */
+    textModel: string;
+    /** Vision model used for thumbnail-aware story generation */
+    visionModel: string;
+};
+export type SystemConfigAlbumGeneratorDto = {
+    audio: SystemConfigAlbumGeneratorAudioDto;
+    /** Cron expression */
+    cronExpression: string;
+    /** Enabled */
+    enabled: boolean;
+    ollama: SystemConfigAlbumGeneratorOllamaDto;
+    /** Theme keywords fed to searchSmart when discovering memory candidates */
+    themeVocabulary: string[];
+};
 export type DatabaseBackupConfig = {
     /** Cron expression */
     cronExpression: string;
@@ -2546,6 +2588,7 @@ export type SystemConfigUserDto = {
     deleteDelay: number;
 };
 export type SystemConfigDto = {
+    albumGenerator: SystemConfigAlbumGeneratorDto;
     backup: SystemConfigBackupsDto;
     ffmpeg: SystemConfigFFmpegDto;
     image: SystemConfigImageDto;
@@ -3615,6 +3658,57 @@ export function getUserStatisticsAdmin({ id, isFavorite, isTrashed, visibility }
     }))}`, {
         ...opts
     }));
+}
+/**
+ * Retrieve the current user's AI album generator settings
+ */
+export function getAlbumGeneratorConfig(opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: AlbumGeneratorUserConfigDto;
+    }>("/album-generator/config", {
+        ...opts
+    }));
+}
+/**
+ * Update the current user's AI album generator settings
+ */
+export function updateAlbumGeneratorConfig({ albumGeneratorUserConfigDto }: {
+    albumGeneratorUserConfigDto: AlbumGeneratorUserConfigDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: AlbumGeneratorUserConfigDto;
+    }>("/album-generator/config", oazapfts.json({
+        ...opts,
+        method: "PUT",
+        body: albumGeneratorUserConfigDto
+    })));
+}
+/**
+ * Stream the composed AI memory video
+ */
+export function getMemoryAiVideo({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchText(`/album-generator/memories/${encodeURIComponent(id)}/video`, {
+        ...opts
+    }));
+}
+/**
+ * Queue an on-demand AI memory for a custom hint
+ */
+export function triggerOnDemand({ albumGeneratorOnDemandRequestDto }: {
+    albumGeneratorOnDemandRequestDto: AlbumGeneratorOnDemandRequestDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 202;
+        data: AlbumGeneratorOnDemandResponseDto;
+    }>("/album-generator/runs", oazapfts.json({
+        ...opts,
+        method: "POST",
+        body: albumGeneratorOnDemandRequestDto
+    })));
 }
 /**
  * List all albums
@@ -7130,7 +7224,8 @@ export enum ManualJobName {
     UserCleanup = "user-cleanup",
     MemoryCleanup = "memory-cleanup",
     MemoryCreate = "memory-create",
-    BackupDatabase = "backup-database"
+    BackupDatabase = "backup-database",
+    AlbumGeneratorRun = "album-generator-run"
 }
 export enum QueueName {
     ThumbnailGeneration = "thumbnailGeneration",
@@ -7165,7 +7260,8 @@ export enum MemorySearchOrder {
     Random = "random"
 }
 export enum MemoryType {
-    OnThisDay = "on_this_day"
+    OnThisDay = "on_this_day",
+    AiStory = "ai_story"
 }
 export enum PartnerDirection {
     SharedBy = "shared-by",
@@ -7221,6 +7317,9 @@ export enum JobName {
     HlsSessionCleanup = "HlsSessionCleanup",
     MemoryCleanup = "MemoryCleanup",
     MemoryGenerate = "MemoryGenerate",
+    AlbumGeneratorRun = "AlbumGeneratorRun",
+    AlbumGeneratorOnDemand = "AlbumGeneratorOnDemand",
+    MemoryVideoCompose = "MemoryVideoCompose",
     NotificationsCleanup = "NotificationsCleanup",
     NotifyUserSignup = "NotifyUserSignup",
     NotifyAlbumInvite = "NotifyAlbumInvite",
@@ -7433,5 +7532,6 @@ export enum ReleaseType {
 export enum UserMetadataKey {
     Preferences = "preferences",
     License = "license",
-    Onboarding = "onboarding"
+    Onboarding = "onboarding",
+    AlbumGenerator = "album-generator"
 }

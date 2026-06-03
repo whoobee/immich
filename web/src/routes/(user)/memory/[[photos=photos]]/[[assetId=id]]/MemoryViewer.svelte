@@ -24,9 +24,9 @@
   import { Route } from '$lib/route';
   import { getAssetBulkActions } from '$lib/services/asset.service';
   import { locale } from '$lib/stores/preferences.store';
-  import { getAssetMediaUrl, handlePromiseError, memoryLaneTitle } from '$lib/utils';
+  import { getAssetMediaUrl, getAssetPlaybackUrl, handlePromiseError, memoryLaneTitle } from '$lib/utils';
   import { fromISODateTimeUTC, toTimelineAsset } from '$lib/utils/timeline-util';
-  import { AssetMediaSize, AssetTypeEnum, getAssetInfo } from '@immich/sdk';
+  import { AssetMediaSize, AssetTypeEnum, getAssetInfo, MemoryType } from '@immich/sdk';
   import { ActionButton, IconButton, Text, toastManager } from '@immich/ui';
   import {
     mdiCardsOutline,
@@ -38,6 +38,8 @@
     mdiDotsVertical,
     mdiHeart,
     mdiHeartOutline,
+    mdiAutoFix,
+    mdiPlayCircleOutline,
     mdiImageMinusOutline,
     mdiImageSearch,
     mdiPause,
@@ -75,6 +77,26 @@
 
   let isSaved = $derived(current?.memory.isSaved);
   let viewerHeight = $state(0);
+
+  // AI-generated memory story metadata. Shape mirrors AiStoryData in server.
+  type AiStory = {
+    title: string;
+    story: string;
+    videoAssetId?: string;
+    videoDurationSeconds?: number;
+  };
+  const aiStory = $derived<AiStory | null>(
+    current?.memory.type === MemoryType.AiStory ? (current.memory.data as unknown as AiStory) : null,
+  );
+  let aiVideoOpen = $state(false);
+  const handlePlayAiVideo = () => {
+    aiVideoOpen = true;
+    handlePromiseError(handleAction('aiVideoOpen', 'pause'));
+  };
+  const handleCloseAiVideo = () => {
+    aiVideoOpen = false;
+    handlePromiseError(handleAction('aiVideoClose', 'play'));
+  };
 
   const viewport: Viewport = $state({ width: 0, height: 0 });
   // need to include padding in the viewport for gallery
@@ -244,7 +266,8 @@
 
   const loadFromParams = (page: Page | NavigationTarget | null) => {
     const assetId = page?.params?.assetId ?? page?.url.searchParams.get(QueryParameter.ID) ?? undefined;
-    return memoryManager.getMemoryAsset(assetId);
+    const memoryId = page?.url.searchParams.get(QueryParameter.MEMORY_ID) ?? undefined;
+    return memoryManager.getMemoryAsset(assetId, memoryId);
   };
 
   const init = (target: Page | NavigationTarget | null) => {
@@ -383,9 +406,28 @@
             size="large"
             onclick={() => goto(Route.photos())}
           />
-          <p class="text-lg">
-            {$memoryLaneTitle(current.memory)}
-          </p>
+          <div class="flex min-w-0 flex-col">
+            <p class="text-lg truncate">
+              {$memoryLaneTitle(current.memory)}
+            </p>
+            {#if aiStory}
+              <div class="mt-0.5 flex items-center gap-1 text-xs text-immich-gray opacity-80">
+                <svg class="size-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d={mdiAutoFix} /></svg>
+                <span>{$t('ai_generated_memory') /* TODO i18n */}</span>
+              </div>
+            {/if}
+          </div>
+          {#if aiStory?.videoAssetId}
+            <IconButton
+              shape="round"
+              variant="ghost"
+              color="secondary"
+              aria-label={$t('play_ai_memory_video') /* TODO i18n */}
+              icon={mdiPlayCircleOutline}
+              size="large"
+              onclick={handlePlayAiVideo}
+            />
+          {/if}
         </div>
       {/if}
 
@@ -657,6 +699,51 @@
         </div>
       </div>
     </section>
+  {/if}
+
+  {#if aiStory && aiVideoOpen && aiStory.videoAssetId}
+    <div
+      role="dialog"
+      aria-label={$t('play_ai_memory_video')}
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
+      onclick={handleCloseAiVideo}
+    >
+      <div
+        class="relative flex max-h-full w-full max-w-5xl flex-col gap-3 rounded-2xl bg-immich-dark-bg p-4 shadow-2xl"
+        onclick={(e) => e.stopPropagation()}
+        role="document"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-xl font-medium">{aiStory.title}</p>
+            <div class="mt-0.5 flex items-center gap-1 text-xs text-immich-gray opacity-80">
+              <svg class="size-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d={mdiAutoFix} /></svg>
+              <span>{$t('ai_generated_memory')}</span>
+            </div>
+          </div>
+          <IconButton
+            shape="round"
+            variant="ghost"
+            color="secondary"
+            aria-label={$t('close')}
+            icon={mdiClose}
+            onclick={handleCloseAiVideo}
+          />
+        </div>
+        <!-- svelte-ignore a11y_media_has_caption -->
+        <video
+          class="w-full rounded-xl bg-black"
+          src={getAssetMediaUrl({ id: aiStory.videoAssetId, size: AssetMediaSize.Original })}
+          poster={getAssetMediaUrl({ id: aiStory.videoAssetId, size: AssetMediaSize.Preview })}
+          controls
+          autoplay
+          playsinline
+        ></video>
+        <p class="max-h-40 overflow-y-auto text-sm leading-relaxed text-immich-gray">
+          {aiStory.story}
+        </p>
+      </div>
+    </div>
   {/if}
 </section>
 

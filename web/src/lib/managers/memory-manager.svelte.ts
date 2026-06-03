@@ -70,7 +70,22 @@ class MemoryManager {
     return memoryAssets;
   });
 
-  getMemoryAsset(assetId: string | undefined) {
+  getMemoryAsset(assetId: string | undefined, memoryId?: string) {
+    // When multiple memories share the same asset (heavy CLIP-result overlap
+    // between AI memories with similar hints), an asset-id-only lookup is
+    // ambiguous — find() returns the first match and the caller can never
+    // see the others. Prefer (memoryId + assetId) when memoryId is provided;
+    // fall back to (memoryId alone) → first asset of that memory; finally
+    // fall back to assetId-only behaviour for callers that haven't migrated.
+    if (memoryId) {
+      const match = this.memoryAssets.find(
+        (memoryAsset) =>
+          memoryAsset.memory.id === memoryId && (assetId ? memoryAsset.asset.id === assetId : true),
+      );
+      if (match) return match;
+      const firstOfMemory = this.memoryAssets.find((memoryAsset) => memoryAsset.memory.id === memoryId);
+      if (firstOfMemory) return firstOfMemory;
+    }
     return this.memoryAssets.find((memoryAsset) => memoryAsset.asset.id === assetId) ?? this.memoryAssets[0];
   }
 

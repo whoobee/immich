@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from '$app/stores';
+  import AlbumGeneratorSettings from './AlbumGeneratorSettings.svelte';
   import ChangePinCodeSettings from './PinCodeSettings.svelte';
   import DownloadSettings from './DownloadSettings.svelte';
   import FeatureSettings from './FeatureSettings.svelte';
@@ -14,6 +15,7 @@
     mdiAccountGroupOutline,
     mdiAccountOutline,
     mdiApi,
+    mdiAutoFix,
     mdiBellOutline,
     mdiCogOutline,
     mdiDevices,
@@ -107,6 +109,15 @@
   subtitle={$t('notifications_setting_description')}
 >
   <NotificationsSettings />
+</SettingAccordion>
+
+<SettingAccordion
+  icon={mdiAutoFix}
+  key="album-generator"
+  title={$t('ai_album_generator_title')}
+  subtitle={$t('ai_album_generator_description')}
+>
+  <AlbumGeneratorSettings />
 </SettingAccordion>
 
 {#if featureFlagsManager.value.oauth}

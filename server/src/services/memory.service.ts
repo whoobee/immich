@@ -127,7 +127,24 @@ export class MemoryService extends BaseService {
 
   async remove(auth: AuthDto, id: string): Promise<void> {
     await this.requireAccess({ auth, permission: Permission.MemoryDelete, ids: [id] });
+
+    // Capture the AI memory's generated video asset (if any) BEFORE deleting
+    // the memory row, so it can be hard-deleted alongside. memory_asset rows
+    // cascade away with the memory itself.
+    const memory = await this.memoryRepository.get(id);
+    const aiVideoAssetId =
+      memory?.type === MemoryType.AiStory
+        ? (memory.data as { videoAssetId?: string } | undefined)?.videoAssetId
+        : undefined;
+
     await this.memoryRepository.delete(id);
+
+    if (aiVideoAssetId) {
+      await this.jobRepository.queue({
+        name: JobName.AssetDelete,
+        data: { id: aiVideoAssetId, deleteOnDisk: true },
+      });
+    }
   }
 
   async addAssets(auth: AuthDto, id: string, dto: BulkIdsDto): Promise<BulkIdResponseDto[]> {
