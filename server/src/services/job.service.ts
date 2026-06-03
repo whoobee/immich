@@ -38,6 +38,10 @@ const asJobItem = (dto: JobCreateDto): JobItem => {
       return { name: JobName.AlbumGeneratorRun };
     }
 
+    case ManualJobName.AlbumGeneratorAudioScan: {
+      return { name: JobName.AlbumGeneratorAudioScan, data: { force: false } };
+    }
+
     default: {
       throw new BadRequestException('Invalid job name');
     }

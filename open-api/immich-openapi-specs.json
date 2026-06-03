@@ -1611,6 +1611,57 @@
         "x-immich-state": "Stable"
       }
     },
+    "/album-generator/audio/scan": {
+      "post": {
+        "description": "Walks the configured audio library, sends each track to the audio-capable Ollama model, and persists mood + scenario tags. Tags then enrich the music picker prompt. Set `force=true` to re-analyse every track even when its sha1 is unchanged.",
+        "operationId": "triggerAudioScan",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlbumGeneratorAudioScanRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlbumGeneratorAudioScanResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Queue an AI scan of the audio library",
+        "tags": [
+          "Album Generator"
+        ],
+        "x-immich-admin-only": true,
+        "x-immich-history": [
+          {
+            "version": "v2",
+            "state": "Added"
+          }
+        ]
+      }
+    },
     "/album-generator/config": {
       "get": {
         "description": "Returns the opt-in flag, maxPerNight cap, and persistent hint list. Returns sensible defaults for users that have never set these.",
@@ -1651,7 +1702,7 @@
         ]
       },
       "put": {
-        "description": "Set opt-in, max nightly memories, and hint list. Hints are soft directives \u2014 they bias both candidate selection (via CLIP search) and the LLM prompt.",
+        "description": "Set opt-in, max nightly memories, and hint list. Hints are soft directives — they bias both candidate selection (via CLIP search) and the LLM prompt.",
         "operationId": "updateAlbumGeneratorConfig",
         "parameters": [],
         "requestBody": {
@@ -1746,7 +1797,7 @@
     },
     "/album-generator/runs": {
       "post": {
-        "description": "Triggers a one-off generation for the authenticated user. The provided hint is used verbatim \u2014 persistent hints, the admin theme vocabulary, the maxPerNight cap, and the recently-used filter are all ignored. The pipeline runs asynchronously; the new memory appears on the Memories page when CLIP search + clustering + LLM + ffmpeg finish (typically 1\u20133 minutes).",
+        "description": "Triggers a one-off generation for the authenticated user. The provided hint is used verbatim — persistent hints, the admin theme vocabulary, the maxPerNight cap, and the recently-used filter are all ignored. The pipeline runs asynchronously; the new memory appears on the Memories page when CLIP search + clustering + LLM + ffmpeg finish (typically 1–3 minutes).",
         "operationId": "triggerOnDemand",
         "parameters": [],
         "requestBody": {
@@ -16107,10 +16158,34 @@
         ],
         "type": "object"
       },
+      "AlbumGeneratorAudioScanRequestDto": {
+        "properties": {
+          "force": {
+            "description": "Re-analyse every track even if the sha1 matches a cached entry",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "AlbumGeneratorAudioScanResponseDto": {
+        "properties": {
+          "queued": {
+            "description": "Scan job accepted; check server logs / settings for progress",
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "queued"
+        ],
+        "type": "object"
+      },
       "AlbumGeneratorOnDemandRequestDto": {
         "properties": {
           "hint": {
-            "description": "Free-form prompt \u2014 passed as the lone hint to CLIP search and the LLM story prompt",
+            "description": "Free-form prompt — passed as the lone hint to CLIP search and the LLM story prompt",
             "maxLength": 200,
             "minLength": 2,
             "type": "string"
@@ -16124,7 +16199,7 @@
       "AlbumGeneratorOnDemandResponseDto": {
         "properties": {
           "queued": {
-            "description": "Job accepted; check the Memories page in 1\u20133 minutes",
+            "description": "Job accepted; check the Memories page in 1–3 minutes",
             "enum": [
               true
             ],
@@ -18742,6 +18817,7 @@
           "MemoryGenerate",
           "AlbumGeneratorRun",
           "AlbumGeneratorOnDemand",
+          "AlbumGeneratorAudioScan",
           "MemoryVideoCompose",
           "NotificationsCleanup",
           "NotifyUserSignup",
@@ -19141,7 +19217,8 @@
           "memory-cleanup",
           "memory-create",
           "backup-database",
-          "album-generator-run"
+          "album-generator-run",
+          "album-generator-audio-scan"
         ],
         "type": "string"
       },
@@ -24689,7 +24766,7 @@
             "type": "string"
           },
           "volume": {
-            "description": "Linear audio gain (0.0\u20131.0)",
+            "description": "Linear audio gain (0.0–1.0)",
             "maximum": 1,
             "minimum": 0,
             "type": "number"
@@ -26094,7 +26171,7 @@
             "type": "array"
           },
           "projectionType": {
-            "description": "Array of projection types for 360\u00b0 content (e.g., \"EQUIRECTANGULAR\", \"CUBEFACE\", \"CYLINDRICAL\")",
+            "description": "Array of projection types for 360° content (e.g., \"EQUIRECTANGULAR\", \"CUBEFACE\", \"CYLINDRICAL\")",
             "items": {
               "nullable": true,
               "type": "string"

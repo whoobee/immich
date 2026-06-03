@@ -344,6 +344,7 @@ export enum SystemMetadataKey {
   VersionCheckState = 'version-check-state',
   License = 'license',
   AlbumGeneratorState = 'album-generator-state',
+  AlbumGeneratorAudioAnalysis = 'album-generator-audio-analysis',
 }
 
 export enum UserMetadataKey {
@@ -410,6 +411,7 @@ export enum ManualJobName {
   MemoryCreate = 'memory-create',
   BackupDatabase = 'backup-database',
   AlbumGeneratorRun = 'album-generator-run',
+  AlbumGeneratorAudioScan = 'album-generator-audio-scan',
 }
 
 export const ManualJobNameSchema = z.enum(ManualJobName).describe('Manual job name').meta({ id: 'ManualJobName' });
@@ -835,6 +837,7 @@ export enum JobName {
 
   AlbumGeneratorRun = 'AlbumGeneratorRun',
   AlbumGeneratorOnDemand = 'AlbumGeneratorOnDemand',
+  AlbumGeneratorAudioScan = 'AlbumGeneratorAudioScan',
   MemoryVideoCompose = 'MemoryVideoCompose',
 
   NotificationsCleanup = 'NotificationsCleanup',

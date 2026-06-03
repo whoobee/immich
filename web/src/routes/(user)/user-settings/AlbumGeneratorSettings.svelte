@@ -1,6 +1,11 @@
 <script lang="ts">
   import { handleError } from '$lib/utils/handle-error';
-  import { getAlbumGeneratorConfig, triggerOnDemand, updateAlbumGeneratorConfig } from '@immich/sdk';
+  import {
+    getAlbumGeneratorConfig,
+    triggerAudioScan,
+    triggerOnDemand,
+    updateAlbumGeneratorConfig,
+  } from '@immich/sdk';
   import { Button, Field, Switch, toastManager } from '@immich/ui';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -68,6 +73,19 @@
 
   let onDemandPrompt = $state('');
   let onDemandSubmitting = $state(false);
+  let audioScanSubmitting = $state(false);
+
+  const handleRescanAudio = async () => {
+    try {
+      audioScanSubmitting = true;
+      await triggerAudioScan({ albumGeneratorAudioScanRequestDto: {} });
+      toastManager.primary($t('ai_album_generator_audio_scan_queued'));
+    } catch (error) {
+      handleError(error, $t('ai_album_generator_audio_scan_failed'));
+    } finally {
+      audioScanSubmitting = false;
+    }
+  };
   const handleGenerateOnDemand = async () => {
     const prompt = onDemandPrompt.trim();
     if (prompt.length < 2) {
@@ -198,7 +216,18 @@
           </div>
         </div>
 
-        <div class="mt-4 flex justify-end">
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
+          <Button
+            shape="round"
+            size="small"
+            color="secondary"
+            onclick={handleRescanAudio}
+            disabled={audioScanSubmitting}
+          >
+            {audioScanSubmitting
+              ? $t('ai_album_generator_audio_scan_submitting')
+              : $t('ai_album_generator_audio_scan_button')}
+          </Button>
           <Button shape="round" type="submit" size="small" onclick={() => handleSave()}>
             {$t('save')}
           </Button>

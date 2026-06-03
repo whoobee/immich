@@ -25,6 +25,7 @@ import { ArgOf } from 'src/repositories/event.repository';
 import { BaseService } from 'src/services/base.service';
 import {
   AiStoryData,
+  AlbumGeneratorAudioAnalysis,
   AlbumGeneratorState,
   AlbumGeneratorUserConfig,
   JobOf,
@@ -316,6 +317,101 @@ export class AlbumGeneratorService extends BaseService {
       data: { userId: auth.user.id, hint },
     });
     return { queued: true };
+  }
+
+  async triggerAudioScan(_auth: AuthDto, force = false): Promise<{ queued: true }> {
+    await this.jobRepository.queue({
+      name: JobName.AlbumGeneratorAudioScan,
+      data: { force },
+    });
+    return { queued: true };
+  }
+
+  @OnJob({ name: JobName.AlbumGeneratorAudioScan, queue: QueueName.BackgroundTask })
+  async handleAudioScan(job: JobOf<JobName.AlbumGeneratorAudioScan>): Promise<JobStatus> {
+    const config = await this.getConfig({ withCache: false });
+    const audio = config.albumGenerator.audio;
+    if (!audio.enabled) {
+      return JobStatus.Skipped;
+    }
+    const filenames = await this.listAudioFilenames(audio.libraryPath);
+    if (filenames.length === 0) {
+      this.logger.warn(`AlbumGeneratorAudioScan: no audio files in ${audio.libraryPath}`);
+      return JobStatus.Skipped;
+    }
+
+    const state: AlbumGeneratorAudioAnalysis = (await this.systemMetadataRepository.get(
+      SystemMetadataKey.AlbumGeneratorAudioAnalysis,
+    )) ?? { byFilename: {} };
+
+    let analysedCount = 0;
+    let skippedCount = 0;
+    for (const filename of filenames) {
+      const fullPath = join(audio.libraryPath, filename);
+      let sha1: string;
+      try {
+        const buf = await this.cryptoRepository.hashFile(fullPath);
+        sha1 = buf.toString('hex');
+      } catch (error) {
+        this.logger.debug(`audio scan: hash failed for ${filename}: ${error}`);
+        continue;
+      }
+
+      const existing = state.byFilename[filename];
+      if (!job?.force && existing && existing.sha1 === sha1) {
+        skippedCount++;
+        continue;
+      }
+
+      let audioBytes;
+      try {
+        audioBytes = await this.storageRepository.readFile(fullPath);
+      } catch (error) {
+        this.logger.debug(`audio scan: read failed for ${filename}: ${error}`);
+        continue;
+      }
+      const audioB64 = audioBytes.toString('base64');
+
+      try {
+        const result = await this.ollamaRepository.analyzeAudio({
+          endpoint: config.albumGenerator.ollama.endpoint,
+          // Reuse the vision model — gemma4:e4b is multimodal and audio-capable.
+          model: config.albumGenerator.ollama.visionModel,
+          audio: audioB64,
+        });
+        state.byFilename[filename] = {
+          sha1,
+          analyzedAt: new Date().toISOString(),
+          model: config.albumGenerator.ollama.visionModel,
+          mood: result.mood,
+          tags: result.tags,
+          scenarios: result.scenarios,
+          description: result.description,
+        };
+        analysedCount++;
+        this.logger.log(
+          `audio scan: ${filename} → mood=${result.mood} scenarios=[${result.scenarios.join(',')}]`,
+        );
+      } catch (error) {
+        this.logger.warn(`audio scan: analyse failed for ${filename}: ${error}`);
+      }
+    }
+
+    // Prune entries whose file no longer exists.
+    const present = new Set(filenames);
+    for (const key of Object.keys(state.byFilename)) {
+      if (!present.has(key)) {
+        delete state.byFilename[key];
+      }
+    }
+
+    state.lastScanAt = new Date().toISOString();
+    await this.systemMetadataRepository.set(SystemMetadataKey.AlbumGeneratorAudioAnalysis, state);
+
+    this.logger.log(
+      `AlbumGeneratorAudioScan: analysed=${analysedCount} skipped(unchanged)=${skippedCount} total=${filenames.length}`,
+    );
+    return JobStatus.Success;
   }
 
   @OnJob({ name: JobName.MemoryVideoCompose, queue: QueueName.BackgroundTask })
@@ -855,12 +951,26 @@ export class AlbumGeneratorService extends BaseService {
     // picks where N is the planned video still count for this cluster.
     const plannedStills = videoStillCount(args.cluster.assetIds.length);
     const expectedTransitionCount = Math.max(0, plannedStills - 1);
-    // Available audio tracks the LLM can choose from (basenames only). We
-    // pass the whole filename so the embedded `<tags>__<name>` convention
-    // gives the model enough hint about mood.
-    const audioCandidates = args.audio.enabled
+    // Available audio tracks the LLM can choose from. When the audio scan
+    // has analysed the library we attach mood + scenario tags so the model
+    // has richer cues than the filename alone.
+    const audioFilenames = args.audio.enabled
       ? await this.listAudioFilenames(args.audio.libraryPath)
       : [];
+    const audioAnalysis: AlbumGeneratorAudioAnalysis = (await this.systemMetadataRepository.get(
+      SystemMetadataKey.AlbumGeneratorAudioAnalysis,
+    )) ?? { byFilename: {} };
+    const audioCandidates: { filename: string; tagLine?: string }[] = audioFilenames.map(
+      (filename) => {
+        const entry = audioAnalysis.byFilename[filename];
+        if (!entry) return { filename };
+        const parts: string[] = [];
+        if (entry.mood) parts.push(`mood=${entry.mood}`);
+        if (entry.scenarios.length > 0) parts.push(`scenarios=${entry.scenarios.join(',')}`);
+        if (entry.tags.length > 0) parts.push(`tags=${entry.tags.slice(0, 5).join(',')}`);
+        return { filename, tagLine: parts.length > 0 ? parts.join(' | ') : undefined };
+      },
+    );
     const prompt = buildStoryPrompt({
       cluster: args.cluster,
       hints: args.hints,
@@ -884,7 +994,7 @@ export class AlbumGeneratorService extends BaseService {
     }
     // Validate the LLM's audio pick — must match a real file in the library.
     const validatedAudioFile =
-      llmResult.audioFile && audioCandidates.includes(llmResult.audioFile)
+      llmResult.audioFile && audioFilenames.includes(llmResult.audioFile)
         ? llmResult.audioFile
         : undefined;
     if (llmResult.audioFile && !validatedAudioFile) {
@@ -957,7 +1067,7 @@ function buildStoryPrompt(args: {
   hints: string[];
   photoCount: number;
   expectedTransitionCount: number;
-  audioCandidates: string[];
+  audioCandidates: { filename: string; tagLine?: string }[];
 }): string {
   const { cluster, hints, photoCount, expectedTransitionCount, audioCandidates } = args;
   const startDate = cluster.startsAt.toISOString().slice(0, 10);
@@ -1010,10 +1120,14 @@ function buildStoryPrompt(args: {
       ? [
           '',
           'Editorial audio: pick ONE background music track from this library',
-          'by filename. Filenames follow `<space-separated tags>__<name>.<ext>`',
-          '— use the tags to gauge mood and pick what best matches your story.',
+          'by filename. Annotations after each filename (mood / scenarios / tags)',
+          'are extracted from listening to the track — use them to gauge mood.',
           'Available tracks (use the exact filename as shown):',
-          ...audioCandidates.slice(0, 60).map((f) => `  - ${f}`),
+          ...audioCandidates
+            .slice(0, 60)
+            .map(({ filename, tagLine }) =>
+              tagLine ? `  - ${filename}   [${tagLine}]` : `  - ${filename}`,
+            ),
           'If nothing fits or you genuinely have no preference, omit the field.',
           '',
         ]

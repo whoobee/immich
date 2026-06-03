@@ -442,6 +442,14 @@ export type AssetStatsResponseDto = {
     /** Number of videos */
     videos: number;
 };
+export type AlbumGeneratorAudioScanRequestDto = {
+    /** Re-analyse every track even if the sha1 matches a cached entry */
+    force?: boolean;
+};
+export type AlbumGeneratorAudioScanResponseDto = {
+    /** Scan job accepted; check server logs / settings for progress */
+    queued: true;
+};
 export type AlbumGeneratorUserConfigDto = {
     /** Soft directives passed to the LLM and used as searchSmart queries when discovering memory candidates */
     hints: string[];
@@ -3662,6 +3670,21 @@ export function getUserStatisticsAdmin({ id, isFavorite, isTrashed, visibility }
     }))}`, {
         ...opts
     }));
+}
+/**
+ * Queue an AI scan of the audio library
+ */
+export function triggerAudioScan({ albumGeneratorAudioScanRequestDto }: {
+    albumGeneratorAudioScanRequestDto: AlbumGeneratorAudioScanRequestDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 202;
+        data: AlbumGeneratorAudioScanResponseDto;
+    }>("/album-generator/audio/scan", oazapfts.json({
+        ...opts,
+        method: "POST",
+        body: albumGeneratorAudioScanRequestDto
+    })));
 }
 /**
  * Retrieve the current user's AI album generator settings
@@ -7229,7 +7252,8 @@ export enum ManualJobName {
     MemoryCleanup = "memory-cleanup",
     MemoryCreate = "memory-create",
     BackupDatabase = "backup-database",
-    AlbumGeneratorRun = "album-generator-run"
+    AlbumGeneratorRun = "album-generator-run",
+    AlbumGeneratorAudioScan = "album-generator-audio-scan"
 }
 export enum QueueName {
     ThumbnailGeneration = "thumbnailGeneration",
@@ -7323,6 +7347,7 @@ export enum JobName {
     MemoryGenerate = "MemoryGenerate",
     AlbumGeneratorRun = "AlbumGeneratorRun",
     AlbumGeneratorOnDemand = "AlbumGeneratorOnDemand",
+    AlbumGeneratorAudioScan = "AlbumGeneratorAudioScan",
     MemoryVideoCompose = "MemoryVideoCompose",
     NotificationsCleanup = "NotificationsCleanup",
     NotifyUserSignup = "NotifyUserSignup",

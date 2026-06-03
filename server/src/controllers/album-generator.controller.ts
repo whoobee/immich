@@ -2,6 +2,8 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Put, Streamab
 import { ApiTags } from '@nestjs/swagger';
 import { Endpoint, HistoryBuilder } from 'src/decorators';
 import {
+  AlbumGeneratorAudioScanRequestDto,
+  AlbumGeneratorAudioScanResponseDto,
   AlbumGeneratorOnDemandRequestDto,
   AlbumGeneratorOnDemandResponseDto,
   AlbumGeneratorUserConfigDto,
@@ -58,6 +60,22 @@ export class AlbumGeneratorController {
     @Body() dto: AlbumGeneratorOnDemandRequestDto,
   ): Promise<AlbumGeneratorOnDemandResponseDto> {
     return this.service.triggerOnDemand(auth, dto.hint);
+  }
+
+  @Post('audio/scan')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @Authenticated({ admin: true })
+  @Endpoint({
+    summary: 'Queue an AI scan of the audio library',
+    description:
+      'Walks the configured audio library, sends each track to the audio-capable Ollama model, and persists mood + scenario tags. Tags then enrich the music picker prompt. Set `force=true` to re-analyse every track even when its sha1 is unchanged.',
+    history: new HistoryBuilder().added('v2'),
+  })
+  triggerAudioScan(
+    @Auth() auth: AuthDto,
+    @Body() dto: AlbumGeneratorAudioScanRequestDto,
+  ): Promise<AlbumGeneratorAudioScanResponseDto> {
+    return this.service.triggerAudioScan(auth, dto.force ?? false);
   }
 
   @Get('memories/:id/video')

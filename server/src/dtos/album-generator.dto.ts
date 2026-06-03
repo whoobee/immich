@@ -38,3 +38,19 @@ const AlbumGeneratorOnDemandResponseSchema = z
 
 export class AlbumGeneratorOnDemandRequestDto extends createZodDto(AlbumGeneratorOnDemandRequestSchema) {}
 export class AlbumGeneratorOnDemandResponseDto extends createZodDto(AlbumGeneratorOnDemandResponseSchema) {}
+
+const AlbumGeneratorAudioScanRequestSchema = z
+  .object({
+    force: z.boolean().describe('Re-analyse every track even if the sha1 matches a cached entry'),
+  })
+  .partial()
+  .meta({ id: 'AlbumGeneratorAudioScanRequestDto' });
+
+const AlbumGeneratorAudioScanResponseSchema = z
+  .object({
+    queued: z.literal(true).describe('Scan job accepted; check server logs / settings for progress'),
+  })
+  .meta({ id: 'AlbumGeneratorAudioScanResponseDto' });
+
+export class AlbumGeneratorAudioScanRequestDto extends createZodDto(AlbumGeneratorAudioScanRequestSchema) {}
+export class AlbumGeneratorAudioScanResponseDto extends createZodDto(AlbumGeneratorAudioScanResponseSchema) {}
