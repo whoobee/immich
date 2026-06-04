@@ -8,6 +8,7 @@ import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/memory.model.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/providers/asset_viewer/asset_viewer.provider.dart';
+import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/presentation/widgets/images/image_provider.dart';
 import 'package:immich_mobile/presentation/widgets/memory/memory_bottom_info.widget.dart';
 import 'package:immich_mobile/presentation/widgets/memory/memory_card.widget.dart';
@@ -345,6 +346,28 @@ class DriftMemoryPage extends HookConsumerWidget {
                             child: const Icon(Icons.close_rounded, color: Colors.white),
                           ),
                         ),
+                        if (mem.type == MemoryTypeEnum.aiStory &&
+                            (mem.data.videoAssetId ?? '').isNotEmpty)
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: MaterialButton(
+                              minWidth: 0,
+                              onPressed: () {
+                                SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+                                context.pushRoute(
+                                  MemoryVideoPlayerRoute(
+                                    videoAssetId: mem.data.videoAssetId!,
+                                    title: mem.data.title,
+                                  ),
+                                );
+                              },
+                              shape: const CircleBorder(),
+                              color: Colors.white.withValues(alpha: 0.2),
+                              elevation: 0,
+                              child: const Icon(Icons.play_circle_filled, color: Colors.white, size: 28),
+                            ),
+                          ),
                         if (currentAsset.value != null && currentAsset.value!.isVideo)
                           Positioned(
                             bottom: 24,

@@ -53,16 +53,35 @@ class MemoriesPage extends ConsumerWidget {
               itemCount: memories.length,
               itemBuilder: (context, index) {
                 final memory = memories[index];
+                void openSlideshow() {
+                  if (memory.assets.isNotEmpty) {
+                    DriftMemoryPage.setMemory(ref, memory);
+                  }
+                  context.pushRoute(
+                    DriftMemoryRoute(memories: memories, memoryIndex: index),
+                  );
+                }
+
+                final videoAssetId = memory.data.videoAssetId;
+                final hasVideo = memory.type == MemoryTypeEnum.aiStory &&
+                    videoAssetId != null &&
+                    videoAssetId.isNotEmpty;
+
                 return _MemoryTile(
                   memory: memory,
-                  onTap: () {
-                    if (memory.assets.isNotEmpty) {
-                      DriftMemoryPage.setMemory(ref, memory);
-                    }
-                    context.pushRoute(
-                      DriftMemoryRoute(memories: memories, memoryIndex: index),
-                    );
-                  },
+                  hasVideo: hasVideo,
+                  // For AI memories the composed video IS the artifact, so a
+                  // plain tap plays it directly. Long-press still opens the
+                  // photo slideshow for users who want to see the stills.
+                  onTap: hasVideo
+                      ? () => context.pushRoute(
+                            MemoryVideoPlayerRoute(
+                              videoAssetId: videoAssetId,
+                              title: memory.data.title,
+                            ),
+                          )
+                      : openSlideshow,
+                  onLongPress: hasVideo ? openSlideshow : null,
                 );
               },
             ),
@@ -74,10 +93,17 @@ class MemoriesPage extends ConsumerWidget {
 }
 
 class _MemoryTile extends StatelessWidget {
-  const _MemoryTile({required this.memory, required this.onTap});
+  const _MemoryTile({
+    required this.memory,
+    required this.onTap,
+    this.onLongPress,
+    this.hasVideo = false,
+  });
 
   final DriftMemory memory;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final bool hasVideo;
 
   @override
   Widget build(BuildContext context) {
@@ -88,6 +114,7 @@ class _MemoryTile extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -108,6 +135,10 @@ class _MemoryTile extends StatelessWidget {
                 ),
               ),
             ),
+            if (hasVideo)
+              const Center(
+                child: Icon(Icons.play_circle_filled, color: Colors.white, size: 56),
+              ),
             Positioned(
               left: 12,
               right: 12,

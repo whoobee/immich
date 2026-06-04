@@ -21,13 +21,18 @@ class MemoryData {
   /// Set for AI-generated stories — the LLM-written narrative.
   final String? story;
 
-  const MemoryData({this.year, this.title, this.story});
+  /// Set for AI-generated stories — id of the composed mp4 promoted to a
+  /// real Asset row server-side. Drives the in-app video player.
+  final String? videoAssetId;
 
-  MemoryData copyWith({int? year, String? title, String? story}) {
+  const MemoryData({this.year, this.title, this.story, this.videoAssetId});
+
+  MemoryData copyWith({int? year, String? title, String? story, String? videoAssetId}) {
     return MemoryData(
       year: year ?? this.year,
       title: title ?? this.title,
       story: story ?? this.story,
+      videoAssetId: videoAssetId ?? this.videoAssetId,
     );
   }
 
@@ -36,6 +41,7 @@ class MemoryData {
       if (year != null) 'year': year,
       if (title != null) 'title': title,
       if (story != null) 'story': story,
+      if (videoAssetId != null) 'videoAssetId': videoAssetId,
     };
   }
 
@@ -44,6 +50,7 @@ class MemoryData {
       year: map['year'] is int ? map['year'] as int : null,
       title: map['title'] is String ? map['title'] as String : null,
       story: map['story'] is String ? map['story'] as String : null,
+      videoAssetId: map['videoAssetId'] is String ? map['videoAssetId'] as String : null,
     );
   }
 
@@ -71,11 +78,14 @@ class MemoryData {
       return true;
     }
 
-    return other.year == year && other.title == title && other.story == story;
+    return other.year == year &&
+        other.title == title &&
+        other.story == story &&
+        other.videoAssetId == videoAssetId;
   }
 
   @override
-  int get hashCode => year.hashCode ^ title.hashCode ^ story.hashCode;
+  int get hashCode => year.hashCode ^ title.hashCode ^ story.hashCode ^ videoAssetId.hashCode;
 }
 
 // Model for a memory stored in the server

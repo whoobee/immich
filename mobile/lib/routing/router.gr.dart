@@ -1473,6 +1473,70 @@ class MemoriesRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [MemoryVideoPlayerPage]
+class MemoryVideoPlayerRoute extends PageRouteInfo<MemoryVideoPlayerRouteArgs> {
+  MemoryVideoPlayerRoute({
+    required String videoAssetId,
+    String? title,
+    Key? key,
+    List<PageRouteInfo>? children,
+  }) : super(
+         MemoryVideoPlayerRoute.name,
+         args: MemoryVideoPlayerRouteArgs(
+           videoAssetId: videoAssetId,
+           title: title,
+           key: key,
+         ),
+         initialChildren: children,
+       );
+
+  static const String name = 'MemoryVideoPlayerRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      final args = data.argsAs<MemoryVideoPlayerRouteArgs>();
+      return MemoryVideoPlayerPage(
+        videoAssetId: args.videoAssetId,
+        title: args.title,
+        key: args.key,
+      );
+    },
+  );
+}
+
+class MemoryVideoPlayerRouteArgs {
+  const MemoryVideoPlayerRouteArgs({
+    required this.videoAssetId,
+    this.title,
+    this.key,
+  });
+
+  final String videoAssetId;
+
+  final String? title;
+
+  final Key? key;
+
+  @override
+  String toString() {
+    return 'MemoryVideoPlayerRouteArgs{videoAssetId: $videoAssetId, title: $title, key: $key}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! MemoryVideoPlayerRouteArgs) return false;
+    return videoAssetId == other.videoAssetId &&
+        title == other.title &&
+        key == other.key;
+  }
+
+  @override
+  int get hashCode => videoAssetId.hashCode ^ title.hashCode ^ key.hashCode;
+}
+
+/// generated route for
 /// [PinAuthPage]
 class PinAuthRoute extends PageRouteInfo<PinAuthRouteArgs> {
   PinAuthRoute({
