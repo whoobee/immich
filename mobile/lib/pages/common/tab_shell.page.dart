@@ -56,6 +56,12 @@ class _TabShellPageState extends ConsumerState<TabShellPage> {
         selectedIcon: Icon(Icons.space_dashboard_rounded, color: context.primaryColor),
         enabled: !isReadonlyModeEnabled,
       ),
+      NavigationDestination(
+        label: 'memories'.tr(),
+        icon: const Icon(Icons.auto_fix_high_outlined),
+        selectedIcon: Icon(Icons.auto_fix_high, color: context.primaryColor),
+        enabled: !isReadonlyModeEnabled,
+      ),
     ];
 
     Widget navigationRail(TabsRouter tabsRouter) {
@@ -78,7 +84,13 @@ class _TabShellPageState extends ConsumerState<TabShellPage> {
     }
 
     return AutoTabsRouter(
-      routes: const [MainTimelineRoute(), DriftSearchRoute(), DriftAlbumsRoute(), DriftLibraryRoute()],
+      routes: const [
+        MainTimelineRoute(),
+        DriftSearchRoute(),
+        DriftAlbumsRoute(),
+        DriftLibraryRoute(),
+        MemoriesRoute(),
+      ],
       duration: const Duration(milliseconds: 600),
       transitionBuilder: (context, child, animation) => FadeTransition(opacity: animation, child: child),
       builder: (context, child) {
@@ -133,6 +145,11 @@ void _onNavigationSelected(TabsRouter router, int index, WidgetRef ref) {
   if (index == kLibraryTabIndex) {
     ref.invalidate(localAlbumProvider);
     ref.invalidate(driftGetAllPeopleProvider);
+  }
+
+  // Memories tab — refresh so AI memories created since last open show up.
+  if (index == kMemoriesTabIndex) {
+    ref.invalidate(driftAllMemoriesFutureProvider);
   }
 
   ref.read(hapticFeedbackProvider.notifier).selectionClick();

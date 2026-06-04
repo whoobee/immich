@@ -244,8 +244,17 @@ class DriftMemoryPage extends HookConsumerWidget {
                 );
               }
 
-              final yearsAgo = DateTime.now().year - memories[mIndex].data.year;
-              final title = 'years_ago'.t(context: context, args: {'years': yearsAgo.toString()});
+              final mem = memories[mIndex];
+              String title;
+              if (mem.type == MemoryTypeEnum.aiStory) {
+                final aiTitle = mem.data.title;
+                title = (aiTitle != null && aiTitle.isNotEmpty) ? aiTitle : 'ai_generated_memory'.t(context: context);
+              } else if (mem.data.year != null) {
+                final yearsAgo = DateTime.now().year - mem.data.year!;
+                title = 'years_ago'.t(context: context, args: {'years': yearsAgo.toString()});
+              } else {
+                title = '';
+              }
               // Build horizontal page
               final assetController = memoryAssetPageControllers[mIndex];
               return Column(

@@ -12,30 +12,46 @@ class DriftMemoryRepository extends DriftDatabaseRepository {
   Future<List<DriftMemory>> getAll(String ownerId) async {
     final now = DateTime.now();
     final localUtc = DateTime.utc(now.year, now.month, now.day, 0, 0, 0);
+    return _query(ownerId, showWindow: localUtc);
+  }
 
-    final query =
-        _db.select(_db.memoryEntity).join([
-            innerJoin(_db.memoryAssetEntity, _db.memoryAssetEntity.memoryId.equalsExp(_db.memoryEntity.id)),
-            innerJoin(
-              _db.remoteAssetEntity,
-              _db.remoteAssetEntity.id.equalsExp(_db.memoryAssetEntity.assetId) &
-                  _db.remoteAssetEntity.deletedAt.isNull() &
-                  _db.remoteAssetEntity.visibility.equalsValue(AssetVisibility.timeline),
-            ),
-          ])
-          ..where(_db.memoryEntity.ownerId.equals(ownerId))
-          ..where(_db.memoryEntity.deletedAt.isNull())
-          ..where(_db.memoryEntity.showAt.isSmallerOrEqualValue(localUtc))
-          ..where(_db.memoryEntity.hideAt.isBiggerOrEqualValue(localUtc))
-          ..orderBy([OrderingTerm.desc(_db.memoryEntity.memoryAt), OrderingTerm.asc(_db.remoteAssetEntity.createdAt)]);
+  /// Returns every non-deleted memory for [ownerId] regardless of the
+  /// `showAt`/`hideAt` window. Backs the dedicated Memories tab where the
+  /// user is browsing rather than getting a today-only lane.
+  Future<List<DriftMemory>> getAllForUser(String ownerId) {
+    return _query(ownerId);
+  }
 
-    final rows = await query.get();
+  Future<List<DriftMemory>> _query(String ownerId, {DateTime? showWindow}) async {
+    final base = _db.select(_db.memoryEntity).join([
+      innerJoin(_db.memoryAssetEntity, _db.memoryAssetEntity.memoryId.equalsExp(_db.memoryEntity.id)),
+      innerJoin(
+        _db.remoteAssetEntity,
+        _db.remoteAssetEntity.id.equalsExp(_db.memoryAssetEntity.assetId) &
+            _db.remoteAssetEntity.deletedAt.isNull() &
+            _db.remoteAssetEntity.visibility.equalsValue(AssetVisibility.timeline),
+      ),
+    ])
+      ..where(_db.memoryEntity.ownerId.equals(ownerId))
+      ..where(_db.memoryEntity.deletedAt.isNull());
+
+    if (showWindow != null) {
+      base
+        ..where(_db.memoryEntity.showAt.isSmallerOrEqualValue(showWindow))
+        ..where(_db.memoryEntity.hideAt.isBiggerOrEqualValue(showWindow));
+    }
+
+    base.orderBy([
+      OrderingTerm.desc(_db.memoryEntity.memoryAt),
+      OrderingTerm.asc(_db.remoteAssetEntity.createdAt),
+    ]);
+
+    final rows = await base.get();
     if (rows.isEmpty) {
       return const [];
     }
 
     final Map<String, DriftMemory> memoriesMap = {};
-
     for (final row in rows) {
       final memory = row.readTable(_db.memoryEntity);
       final asset = row.readTable(_db.remoteAssetEntity);

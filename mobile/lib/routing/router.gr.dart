@@ -1457,6 +1457,22 @@ class MapLocationPickerRouteArgs {
 }
 
 /// generated route for
+/// [MemoriesPage]
+class MemoriesRoute extends PageRouteInfo<void> {
+  const MemoriesRoute({List<PageRouteInfo>? children})
+    : super(MemoriesRoute.name, initialChildren: children);
+
+  static const String name = 'MemoriesRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const MemoriesPage();
+    },
+  );
+}
+
+/// generated route for
 /// [PinAuthPage]
 class PinAuthRoute extends PageRouteInfo<PinAuthRouteArgs> {
   PinAuthRoute({

@@ -50,8 +50,7 @@ class DriftMemoryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final yearsAgo = DateTime.now().year - memory.data.year;
-    final title = 'years_ago'.t(context: context, args: {'years': yearsAgo.toString()});
+    final title = _laneTitle(context);
     return Center(
       child: Stack(
         children: [
@@ -74,6 +73,8 @@ class DriftMemoryCard extends ConsumerWidget {
               constraints: const BoxConstraints(maxWidth: 114),
               child: Text(
                 title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 15),
               ),
             ),
@@ -81,5 +82,21 @@ class DriftMemoryCard extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  String _laneTitle(BuildContext context) {
+    if (memory.type == MemoryTypeEnum.aiStory) {
+      final aiTitle = memory.data.title;
+      if (aiTitle != null && aiTitle.isNotEmpty) {
+        return aiTitle;
+      }
+      return 'ai_generated_memory'.t(context: context);
+    }
+    final year = memory.data.year;
+    if (year == null) {
+      return '';
+    }
+    final yearsAgo = DateTime.now().year - year;
+    return 'years_ago'.t(context: context, args: {'years': yearsAgo.toString()});
   }
 }

@@ -13,6 +13,11 @@ class DriftMemoryService {
     return _repository.getAll(ownerId);
   }
 
+  /// All memories for [ownerId], no show/hide window. Drives the Memories tab.
+  Future<List<DriftMemory>> getAllForUser(String ownerId) {
+    return _repository.getAllForUser(ownerId);
+  }
+
   Future<DriftMemory?> get(String memoryId) {
     return _repository.get(memoryId);
   }

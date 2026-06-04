@@ -904,6 +904,7 @@ extension on AssetOrder {
 extension on MemoryType {
   MemoryTypeEnum toMemoryType() => switch (this) {
     MemoryType.onThisDay => MemoryTypeEnum.onThisDay,
+    MemoryType.aiStory => MemoryTypeEnum.aiStory,
     _ => throw Exception('Unknown MemoryType value: $this'),
   };
 }

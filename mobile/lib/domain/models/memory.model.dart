@@ -5,33 +5,65 @@ import 'package:collection/collection.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 
 enum MemoryTypeEnum {
-  // do not change this order!
+  // Stored as IntColumn via drift's intEnum<MemoryTypeEnum>() — preserve order
+  // and only append new values, otherwise existing rows are misinterpreted.
   onThisDay,
+  aiStory,
 }
 
 class MemoryData {
-  final int year;
+  /// Set for `onThisDay` memories; null for AI stories.
+  final int? year;
 
-  const MemoryData({required this.year});
+  /// Set for AI-generated stories — the LLM-picked title.
+  final String? title;
 
-  MemoryData copyWith({int? year}) {
-    return MemoryData(year: year ?? this.year);
+  /// Set for AI-generated stories — the LLM-written narrative.
+  final String? story;
+
+  const MemoryData({this.year, this.title, this.story});
+
+  MemoryData copyWith({int? year, String? title, String? story}) {
+    return MemoryData(
+      year: year ?? this.year,
+      title: title ?? this.title,
+      story: story ?? this.story,
+    );
   }
 
   Map<String, dynamic> toMap() {
-    return <String, dynamic>{'year': year};
+    return <String, dynamic>{
+      if (year != null) 'year': year,
+      if (title != null) 'title': title,
+      if (story != null) 'story': story,
+    };
   }
 
   factory MemoryData.fromMap(Map<String, dynamic> map) {
-    return MemoryData(year: map['year'] as int);
+    return MemoryData(
+      year: map['year'] is int ? map['year'] as int : null,
+      title: map['title'] is String ? map['title'] as String : null,
+      story: map['story'] is String ? map['story'] as String : null,
+    );
   }
 
   String toJson() => json.encode(toMap());
 
-  factory MemoryData.fromJson(String source) => MemoryData.fromMap(json.decode(source) as Map<String, dynamic>);
+  factory MemoryData.fromJson(String source) {
+    try {
+      final decoded = json.decode(source);
+      if (decoded is Map<String, dynamic>) {
+        return MemoryData.fromMap(decoded);
+      }
+    } catch (_) {
+      // Fall through to a safe empty value rather than crashing the whole
+      // memory load over one malformed row.
+    }
+    return const MemoryData();
+  }
 
   @override
-  String toString() => 'MemoryData(year: $year)';
+  String toString() => 'MemoryData(year: $year, title: $title)';
 
   @override
   bool operator ==(covariant MemoryData other) {
@@ -39,11 +71,11 @@ class MemoryData {
       return true;
     }
 
-    return other.year == year;
+    return other.year == year && other.title == title && other.story == story;
   }
 
   @override
-  int get hashCode => year.hashCode;
+  int get hashCode => year.hashCode ^ title.hashCode ^ story.hashCode;
 }
 
 // Model for a memory stored in the server
