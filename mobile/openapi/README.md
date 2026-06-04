@@ -83,6 +83,11 @@ Class | Method | HTTP request | Description
 *ActivitiesApi* | [**deleteActivity**](doc//ActivitiesApi.md#deleteactivity) | **DELETE** /activities/{id} | Delete an activity
 *ActivitiesApi* | [**getActivities**](doc//ActivitiesApi.md#getactivities) | **GET** /activities | List all activities
 *ActivitiesApi* | [**getActivityStatistics**](doc//ActivitiesApi.md#getactivitystatistics) | **GET** /activities/statistics | Retrieve activity statistics
+*AlbumGeneratorApi* | [**getAlbumGeneratorConfig**](doc//AlbumGeneratorApi.md#getalbumgeneratorconfig) | **GET** /album-generator/config | Retrieve the current user's AI album generator settings
+*AlbumGeneratorApi* | [**getMemoryAiVideo**](doc//AlbumGeneratorApi.md#getmemoryaivideo) | **GET** /album-generator/memories/{id}/video | Stream the composed AI memory video
+*AlbumGeneratorApi* | [**triggerAudioScan**](doc//AlbumGeneratorApi.md#triggeraudioscan) | **POST** /album-generator/audio/scan | Queue an AI scan of the audio library
+*AlbumGeneratorApi* | [**triggerOnDemand**](doc//AlbumGeneratorApi.md#triggerondemand) | **POST** /album-generator/runs | Queue an on-demand AI memory for a custom hint
+*AlbumGeneratorApi* | [**updateAlbumGeneratorConfig**](doc//AlbumGeneratorApi.md#updatealbumgeneratorconfig) | **PUT** /album-generator/config | Update the current user's AI album generator settings
 *AlbumsApi* | [**addAssetsToAlbum**](doc//AlbumsApi.md#addassetstoalbum) | **PUT** /albums/{id}/assets | Add assets to an album
 *AlbumsApi* | [**addAssetsToAlbums**](doc//AlbumsApi.md#addassetstoalbums) | **PUT** /albums/assets | Add assets to albums
 *AlbumsApi* | [**addUsersToAlbum**](doc//AlbumsApi.md#adduserstoalbum) | **PUT** /albums/{id}/users | Share album with users
@@ -332,6 +337,11 @@ Class | Method | HTTP request | Description
  - [ActivityStatisticsResponseDto](doc//ActivityStatisticsResponseDto.md)
  - [AddUsersDto](doc//AddUsersDto.md)
  - [AdminOnboardingUpdateDto](doc//AdminOnboardingUpdateDto.md)
+ - [AlbumGeneratorAudioScanRequestDto](doc//AlbumGeneratorAudioScanRequestDto.md)
+ - [AlbumGeneratorAudioScanResponseDto](doc//AlbumGeneratorAudioScanResponseDto.md)
+ - [AlbumGeneratorOnDemandRequestDto](doc//AlbumGeneratorOnDemandRequestDto.md)
+ - [AlbumGeneratorOnDemandResponseDto](doc//AlbumGeneratorOnDemandResponseDto.md)
+ - [AlbumGeneratorUserConfigDto](doc//AlbumGeneratorUserConfigDto.md)
  - [AlbumResponseDto](doc//AlbumResponseDto.md)
  - [AlbumStatisticsResponseDto](doc//AlbumStatisticsResponseDto.md)
  - [AlbumUserAddDto](doc//AlbumUserAddDto.md)
@@ -601,6 +611,9 @@ Class | Method | HTTP request | Description
  - [SyncUserMetadataDeleteV1](doc//SyncUserMetadataDeleteV1.md)
  - [SyncUserMetadataV1](doc//SyncUserMetadataV1.md)
  - [SyncUserV1](doc//SyncUserV1.md)
+ - [SystemConfigAlbumGeneratorAudioDto](doc//SystemConfigAlbumGeneratorAudioDto.md)
+ - [SystemConfigAlbumGeneratorDto](doc//SystemConfigAlbumGeneratorDto.md)
+ - [SystemConfigAlbumGeneratorOllamaDto](doc//SystemConfigAlbumGeneratorOllamaDto.md)
  - [SystemConfigBackupsDto](doc//SystemConfigBackupsDto.md)
  - [SystemConfigDto](doc//SystemConfigDto.md)
  - [SystemConfigFFmpegDto](doc//SystemConfigFFmpegDto.md)

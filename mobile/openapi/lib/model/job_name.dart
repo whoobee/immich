@@ -55,6 +55,10 @@ class JobName {
   static const hlsSessionCleanup = JobName._(r'HlsSessionCleanup');
   static const memoryCleanup = JobName._(r'MemoryCleanup');
   static const memoryGenerate = JobName._(r'MemoryGenerate');
+  static const albumGeneratorRun = JobName._(r'AlbumGeneratorRun');
+  static const albumGeneratorOnDemand = JobName._(r'AlbumGeneratorOnDemand');
+  static const albumGeneratorAudioScan = JobName._(r'AlbumGeneratorAudioScan');
+  static const memoryVideoCompose = JobName._(r'MemoryVideoCompose');
   static const notificationsCleanup = JobName._(r'NotificationsCleanup');
   static const notifyUserSignup = JobName._(r'NotifyUserSignup');
   static const notifyAlbumInvite = JobName._(r'NotifyAlbumInvite');
@@ -114,6 +118,10 @@ class JobName {
     hlsSessionCleanup,
     memoryCleanup,
     memoryGenerate,
+    albumGeneratorRun,
+    albumGeneratorOnDemand,
+    albumGeneratorAudioScan,
+    memoryVideoCompose,
     notificationsCleanup,
     notifyUserSignup,
     notifyAlbumInvite,
@@ -208,6 +216,10 @@ class JobNameTypeTransformer {
         case r'HlsSessionCleanup': return JobName.hlsSessionCleanup;
         case r'MemoryCleanup': return JobName.memoryCleanup;
         case r'MemoryGenerate': return JobName.memoryGenerate;
+        case r'AlbumGeneratorRun': return JobName.albumGeneratorRun;
+        case r'AlbumGeneratorOnDemand': return JobName.albumGeneratorOnDemand;
+        case r'AlbumGeneratorAudioScan': return JobName.albumGeneratorAudioScan;
+        case r'MemoryVideoCompose': return JobName.memoryVideoCompose;
         case r'NotificationsCleanup': return JobName.notificationsCleanup;
         case r'NotifyUserSignup': return JobName.notifyUserSignup;
         case r'NotifyAlbumInvite': return JobName.notifyAlbumInvite;

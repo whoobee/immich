@@ -32,6 +32,7 @@ import 'package:immich_mobile/providers/routes.provider.dart';
 import 'package:immich_mobile/providers/theme.provider.dart';
 import 'package:immich_mobile/routing/app_navigation_observer.dart';
 import 'package:immich_mobile/routing/router.dart';
+import 'package:immich_mobile/services/album_generator_background.service.dart';
 import 'package:immich_mobile/services/deep_link.service.dart';
 import 'package:immich_mobile/theme/dynamic_theme.dart';
 import 'package:immich_mobile/theme/theme_data.dart';
@@ -56,6 +57,10 @@ void main() async {
     // Warm-up isolate pool for worker manager
     await workerManagerPatch.init(dynamicSpawning: true, isolatesCount: max(Platform.numberOfProcessors - 1, 5));
     await migrateDatabaseIfNeeded(drift);
+    // Workmanager is the engine behind the AI-memory periodic check; safe to
+    // call before login since the task itself bails out when the user has
+    // not opted in (no scheduled task).
+    unawaited(ensureAiMemoryWorkmanagerInitialized());
 
     runApp(ProviderScope(overrides: [driftProvider.overrideWith(driftOverride(drift))], child: const MainWidget()));
   } catch (error, stack) {

@@ -18,6 +18,11 @@ enum StoreKey<T> {
 
   syncMigrationStatus<String>._(1013),
 
+  // ISO-8601 timestamp of the most recent AI memory the background poller
+  // has notified the user about. Tracked locally so a new periodic fire only
+  // surfaces memories created after the last delivered notification.
+  lastAiMemoryNotifiedAt<String>._(1014),
+
   // Legacy keys that have been migrated to the new metadata store
   legacyBackupRequireCharging<bool>._(7),
   legacyBackupTriggerDelay<int>._(8),

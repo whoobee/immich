@@ -193,6 +193,16 @@ class ApiClient {
           return AddUsersDto.fromJson(value);
         case 'AdminOnboardingUpdateDto':
           return AdminOnboardingUpdateDto.fromJson(value);
+        case 'AlbumGeneratorAudioScanRequestDto':
+          return AlbumGeneratorAudioScanRequestDto.fromJson(value);
+        case 'AlbumGeneratorAudioScanResponseDto':
+          return AlbumGeneratorAudioScanResponseDto.fromJson(value);
+        case 'AlbumGeneratorOnDemandRequestDto':
+          return AlbumGeneratorOnDemandRequestDto.fromJson(value);
+        case 'AlbumGeneratorOnDemandResponseDto':
+          return AlbumGeneratorOnDemandResponseDto.fromJson(value);
+        case 'AlbumGeneratorUserConfigDto':
+          return AlbumGeneratorUserConfigDto.fromJson(value);
         case 'AlbumResponseDto':
           return AlbumResponseDto.fromJson(value);
         case 'AlbumStatisticsResponseDto':
@@ -731,6 +741,12 @@ class ApiClient {
           return SyncUserMetadataV1.fromJson(value);
         case 'SyncUserV1':
           return SyncUserV1.fromJson(value);
+        case 'SystemConfigAlbumGeneratorAudioDto':
+          return SystemConfigAlbumGeneratorAudioDto.fromJson(value);
+        case 'SystemConfigAlbumGeneratorDto':
+          return SystemConfigAlbumGeneratorDto.fromJson(value);
+        case 'SystemConfigAlbumGeneratorOllamaDto':
+          return SystemConfigAlbumGeneratorOllamaDto.fromJson(value);
         case 'SystemConfigBackupsDto':
           return SystemConfigBackupsDto.fromJson(value);
         case 'SystemConfigDto':

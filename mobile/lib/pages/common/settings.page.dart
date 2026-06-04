@@ -2,9 +2,13 @@ import 'package:auto_route/auto_route.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart' hide Store;
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/widgets/settings/advanced_settings.dart';
+import 'package:immich_mobile/providers/user.provider.dart';
+import 'package:immich_mobile/widgets/settings/album_generator_settings/admin_album_generator_settings.dart';
+import 'package:immich_mobile/widgets/settings/album_generator_settings/album_generator_settings.dart';
 import 'package:immich_mobile/widgets/settings/asset_list_settings/asset_list_settings.dart';
 import 'package:immich_mobile/widgets/settings/asset_viewer_settings/asset_viewer_settings.dart';
 import 'package:immich_mobile/widgets/settings/backup_settings/drift_backup_settings.dart';
@@ -18,6 +22,13 @@ import 'package:immich_mobile/widgets/settings/settings_card.dart';
 
 enum SettingSection {
   advanced('advanced', Icons.build_outlined, "advanced_settings_tile_subtitle"),
+  aiAlbumGenerator('ai_album_generator_title', Icons.auto_fix_high, "ai_album_generator_description"),
+  aiAlbumGeneratorAdmin(
+    'admin.album_generator_settings',
+    Icons.admin_panel_settings_outlined,
+    "admin.album_generator_settings_description",
+    adminOnly: true,
+  ),
   assetViewer('asset_viewer_settings_title', Icons.image_outlined, "asset_viewer_settings_subtitle"),
   backup('backup', Icons.cloud_upload_outlined, "backup_settings_subtitle"),
   freeUpSpace('free_up_space', Icons.cleaning_services_outlined, "free_up_space_settings_subtitle"),
@@ -31,9 +42,12 @@ enum SettingSection {
   final String title;
   final String subtitle;
   final IconData icon;
+  final bool adminOnly;
 
   Widget get widget => switch (this) {
     SettingSection.advanced => const AdvancedSettings(),
+    SettingSection.aiAlbumGenerator => const AlbumGeneratorSettings(),
+    SettingSection.aiAlbumGeneratorAdmin => const AdminAlbumGeneratorSettings(),
     SettingSection.assetViewer => const AssetViewerSettings(),
     SettingSection.backup => const DriftBackupSettings(),
     SettingSection.freeUpSpace => const FreeUpSpaceSettings(),
@@ -45,7 +59,7 @@ enum SettingSection {
     SettingSection.beta => const SyncStatusAndActions(),
   };
 
-  const SettingSection(this.title, this.icon, this.subtitle);
+  const SettingSection(this.title, this.icon, this.subtitle, {this.adminOnly = false});
 }
 
 @RoutePage()
@@ -62,11 +76,13 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
-class _MobileLayout extends StatelessWidget {
+class _MobileLayout extends ConsumerWidget {
   const _MobileLayout();
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isAdmin = ref.watch(currentUserProvider)?.isAdmin == true;
     final List<Widget> settings = SettingSection.values
+        .where((s) => !s.adminOnly || isAdmin)
         .expand(
           (setting) => setting == SettingSection.beta
               ? [
@@ -91,11 +107,13 @@ class _MobileLayout extends StatelessWidget {
   }
 }
 
-class _TabletLayout extends HookWidget {
+class _TabletLayout extends HookConsumerWidget {
   const _TabletLayout();
   @override
-  Widget build(BuildContext context) {
-    final selectedSection = useState<SettingSection>(SettingSection.values.first);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isAdmin = ref.watch(currentUserProvider)?.isAdmin == true;
+    final visibleSections = SettingSection.values.where((s) => !s.adminOnly || isAdmin).toList();
+    final selectedSection = useState<SettingSection>(visibleSections.first);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
@@ -104,7 +122,7 @@ class _TabletLayout extends HookWidget {
           flex: 2,
           child: CustomScrollView(
             slivers: [
-              ...SettingSection.values.map(
+              ...visibleSections.map(
                 (s) => SliverToBoxAdapter(
                   child: ListTile(
                     title: Text(s.title).tr(),

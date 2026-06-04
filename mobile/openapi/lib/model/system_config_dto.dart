@@ -13,6 +13,7 @@ part of openapi.api;
 class SystemConfigDto {
   /// Returns a new [SystemConfigDto] instance.
   SystemConfigDto({
+    required this.albumGenerator,
     required this.backup,
     required this.ffmpeg,
     required this.image,
@@ -35,6 +36,8 @@ class SystemConfigDto {
     required this.trash,
     required this.user,
   });
+
+  SystemConfigAlbumGeneratorDto albumGenerator;
 
   SystemConfigBackupsDto backup;
 
@@ -80,6 +83,7 @@ class SystemConfigDto {
 
   @override
   bool operator ==(Object other) => identical(this, other) || other is SystemConfigDto &&
+    other.albumGenerator == albumGenerator &&
     other.backup == backup &&
     other.ffmpeg == ffmpeg &&
     other.image == image &&
@@ -105,6 +109,7 @@ class SystemConfigDto {
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
+    (albumGenerator.hashCode) +
     (backup.hashCode) +
     (ffmpeg.hashCode) +
     (image.hashCode) +
@@ -128,10 +133,11 @@ class SystemConfigDto {
     (user.hashCode);
 
   @override
-  String toString() => 'SystemConfigDto[backup=$backup, ffmpeg=$ffmpeg, image=$image, job=$job, library_=$library_, logging=$logging, machineLearning=$machineLearning, map=$map, metadata=$metadata, newVersionCheck=$newVersionCheck, nightlyTasks=$nightlyTasks, notifications=$notifications, oauth=$oauth, passwordLogin=$passwordLogin, reverseGeocoding=$reverseGeocoding, server=$server, storageTemplate=$storageTemplate, templates=$templates, theme=$theme, trash=$trash, user=$user]';
+  String toString() => 'SystemConfigDto[albumGenerator=$albumGenerator, backup=$backup, ffmpeg=$ffmpeg, image=$image, job=$job, library_=$library_, logging=$logging, machineLearning=$machineLearning, map=$map, metadata=$metadata, newVersionCheck=$newVersionCheck, nightlyTasks=$nightlyTasks, notifications=$notifications, oauth=$oauth, passwordLogin=$passwordLogin, reverseGeocoding=$reverseGeocoding, server=$server, storageTemplate=$storageTemplate, templates=$templates, theme=$theme, trash=$trash, user=$user]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
+      json[r'albumGenerator'] = this.albumGenerator;
       json[r'backup'] = this.backup;
       json[r'ffmpeg'] = this.ffmpeg;
       json[r'image'] = this.image;
@@ -165,6 +171,7 @@ class SystemConfigDto {
       final json = value.cast<String, dynamic>();
 
       return SystemConfigDto(
+        albumGenerator: SystemConfigAlbumGeneratorDto.fromJson(json[r'albumGenerator'])!,
         backup: SystemConfigBackupsDto.fromJson(json[r'backup'])!,
         ffmpeg: SystemConfigFFmpegDto.fromJson(json[r'ffmpeg'])!,
         image: SystemConfigImageDto.fromJson(json[r'image'])!,
@@ -233,6 +240,7 @@ class SystemConfigDto {
 
   /// The list of required keys that must be present in a JSON.
   static const requiredKeys = <String>{
+    'albumGenerator',
     'backup',
     'ffmpeg',
     'image',
