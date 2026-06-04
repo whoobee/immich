@@ -359,6 +359,7 @@ class DriftMemoryPage extends HookConsumerWidget {
                                   MemoryVideoPlayerRoute(
                                     videoAssetId: mem.data.videoAssetId!,
                                     title: mem.data.title,
+                                    memoryId: mem.id,
                                   ),
                                 );
                               },

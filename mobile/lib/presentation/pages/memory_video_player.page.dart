@@ -1,12 +1,21 @@
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:background_downloader/background_downloader.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_mobile/constants/constants.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
+import 'package:immich_mobile/providers/asset_viewer/download.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/memory.provider.dart';
+import 'package:immich_mobile/repositories/download.repository.dart';
+import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/services/api.service.dart';
+import 'package:immich_mobile/utils/image_url_builder.dart';
+import 'package:immich_mobile/widgets/common/immich_toast.dart';
 import 'package:native_video_player/native_video_player.dart';
 
 @RoutePage()
@@ -18,9 +27,14 @@ class MemoryVideoPlayerPage extends ConsumerStatefulWidget {
   /// LLM-picked title shown in the app bar.
   final String? title;
 
+  /// When set, the app bar exposes a "view photos" action that opens the
+  /// memory's photo slideshow (DriftMemoryRoute) for the same memory.
+  final String? memoryId;
+
   const MemoryVideoPlayerPage({
     required this.videoAssetId,
     this.title,
+    this.memoryId,
     super.key,
   });
 
@@ -45,6 +59,14 @@ class _MemoryVideoPlayerPageState extends ConsumerState<MemoryVideoPlayerPage> {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
     _scheduleHide();
+    // Touching the download-state provider here ensures the listener that
+    // calls `saveVideo` on TaskStatus.complete is wired up before we enqueue.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      ref.read(downloadStateProvider);
+    });
   }
 
   @override
@@ -157,6 +179,71 @@ class _MemoryVideoPlayerPageState extends ConsumerState<MemoryVideoPlayerPage> {
     _scheduleHide();
   }
 
+  Future<void> _openPhotos() async {
+    final memoryId = widget.memoryId;
+    if (memoryId == null) {
+      return;
+    }
+    final service = ref.read(driftMemoryServiceProvider);
+    final memory = await service.get(memoryId);
+    if (!mounted) {
+      return;
+    }
+    if (memory == null || memory.assets.isEmpty) {
+      ImmichToast.show(context: context, msg: 'no_assets_to_show'.tr(), toastType: ToastType.info);
+      return;
+    }
+    unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+    unawaited(context.pushRoute(DriftMemoryRoute(memories: [memory], memoryIndex: 0)));
+  }
+
+  Future<void> _downloadVideo() async {
+    final headers = ApiService.getRequestHeaders();
+    final url = getOriginalUrlForRemoteId(widget.videoAssetId);
+    final filename = _downloadFilename();
+    final task = DownloadTask(
+      taskId: widget.videoAssetId,
+      url: url,
+      headers: headers,
+      filename: filename,
+      updates: Updates.statusAndProgress,
+      group: kDownloadGroupVideo,
+    );
+    try {
+      await ref.read(downloadRepositoryProvider).downloadAll([task]);
+      if (!mounted) {
+        return;
+      }
+      ImmichToast.show(
+        context: context,
+        msg: 'download_started'.tr(),
+      );
+    } catch (err) {
+      if (!mounted) {
+        return;
+      }
+      ImmichToast.show(
+        context: context,
+        msg: 'download_failed'.tr(),
+        toastType: ToastType.error,
+      );
+    }
+  }
+
+  String _downloadFilename() {
+    final raw = widget.title;
+    final fallback = 'memory_${widget.videoAssetId}.mp4';
+    if (raw == null || raw.trim().isEmpty) {
+      return fallback;
+    }
+    // Strip characters that confuse Android's MediaStore + filesystem.
+    final cleaned = raw
+        .trim()
+        .replaceAll(RegExp(r'[\\/:*?"<>|]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ');
+    return '${cleaned.substring(0, cleaned.length.clamp(0, 80))}.mp4';
+  }
+
   Future<void> _toggleMute() async {
     final controller = _controller;
     if (controller == null) {
@@ -190,6 +277,25 @@ class _MemoryVideoPlayerPageState extends ConsumerState<MemoryVideoPlayerPage> {
               title: widget.title != null
                   ? Text(widget.title!, overflow: TextOverflow.ellipsis)
                   : null,
+              actions: [
+                if (widget.memoryId != null)
+                  IconButton(
+                    tooltip: 'view_photos'.tr(),
+                    icon: const Icon(Icons.collections_outlined),
+                    onPressed: () {
+                      _scheduleHide();
+                      _openPhotos();
+                    },
+                  ),
+                IconButton(
+                  tooltip: 'download'.tr(),
+                  icon: const Icon(Icons.download_outlined),
+                  onPressed: () {
+                    _scheduleHide();
+                    _downloadVideo();
+                  },
+                ),
+              ],
             )
           : null,
       body: GestureDetector(

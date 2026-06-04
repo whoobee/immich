@@ -78,6 +78,7 @@ class MemoriesPage extends ConsumerWidget {
                             MemoryVideoPlayerRoute(
                               videoAssetId: videoAssetId,
                               title: memory.data.title,
+                              memoryId: memory.id,
                             ),
                           )
                       : openSlideshow,

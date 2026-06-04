@@ -1478,6 +1478,7 @@ class MemoryVideoPlayerRoute extends PageRouteInfo<MemoryVideoPlayerRouteArgs> {
   MemoryVideoPlayerRoute({
     required String videoAssetId,
     String? title,
+    String? memoryId,
     Key? key,
     List<PageRouteInfo>? children,
   }) : super(
@@ -1485,6 +1486,7 @@ class MemoryVideoPlayerRoute extends PageRouteInfo<MemoryVideoPlayerRouteArgs> {
          args: MemoryVideoPlayerRouteArgs(
            videoAssetId: videoAssetId,
            title: title,
+           memoryId: memoryId,
            key: key,
          ),
          initialChildren: children,
@@ -1499,6 +1501,7 @@ class MemoryVideoPlayerRoute extends PageRouteInfo<MemoryVideoPlayerRouteArgs> {
       return MemoryVideoPlayerPage(
         videoAssetId: args.videoAssetId,
         title: args.title,
+        memoryId: args.memoryId,
         key: args.key,
       );
     },
@@ -1509,6 +1512,7 @@ class MemoryVideoPlayerRouteArgs {
   const MemoryVideoPlayerRouteArgs({
     required this.videoAssetId,
     this.title,
+    this.memoryId,
     this.key,
   });
 
@@ -1516,11 +1520,13 @@ class MemoryVideoPlayerRouteArgs {
 
   final String? title;
 
+  final String? memoryId;
+
   final Key? key;
 
   @override
   String toString() {
-    return 'MemoryVideoPlayerRouteArgs{videoAssetId: $videoAssetId, title: $title, key: $key}';
+    return 'MemoryVideoPlayerRouteArgs{videoAssetId: $videoAssetId, title: $title, memoryId: $memoryId, key: $key}';
   }
 
   @override
@@ -1529,11 +1535,13 @@ class MemoryVideoPlayerRouteArgs {
     if (other is! MemoryVideoPlayerRouteArgs) return false;
     return videoAssetId == other.videoAssetId &&
         title == other.title &&
+        memoryId == other.memoryId &&
         key == other.key;
   }
 
   @override
-  int get hashCode => videoAssetId.hashCode ^ title.hashCode ^ key.hashCode;
+  int get hashCode =>
+      videoAssetId.hashCode ^ title.hashCode ^ memoryId.hashCode ^ key.hashCode;
 }
 
 /// generated route for
