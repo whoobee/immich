@@ -208,7 +208,12 @@ class _MemoryVideoPlayerPageState extends ConsumerState<MemoryVideoPlayerPage> {
                 ),
               )
             else
-              NativeVideoPlayerView(onViewReady: _initController),
+              // The native player is a platform view that swallows touches
+              // before the parent GestureDetector sees them — IgnorePointer
+              // lets taps fall through so we can toggle the controls overlay.
+              IgnorePointer(
+                child: NativeVideoPlayerView(onViewReady: _initController),
+              ),
 
             if (_error == null && !_ready) const CircularProgressIndicator(),
 
