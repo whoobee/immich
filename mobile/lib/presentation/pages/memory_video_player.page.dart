@@ -11,7 +11,6 @@ import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/providers/asset_viewer/download.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/memory.provider.dart';
-import 'package:immich_mobile/repositories/download.repository.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/services/api.service.dart';
 import 'package:immich_mobile/utils/image_url_builder.dart';
@@ -198,6 +197,33 @@ class _MemoryVideoPlayerPageState extends ConsumerState<MemoryVideoPlayerPage> {
   }
 
   Future<void> _downloadVideo() async {
+    final downloader = FileDownloader();
+
+    // POST_NOTIFICATIONS on Android 13+ is opt-in; without it the per-task
+    // progress notification never appears even though the download is running.
+    final notifStatus = await downloader.permissions.status(PermissionType.notifications);
+    if (notifStatus != PermissionStatus.granted) {
+      final requested = await downloader.permissions.request(PermissionType.notifications);
+      if (requested != PermissionStatus.granted && mounted) {
+        ImmichToast.show(
+          context: context,
+          msg: 'notification_permission_list_tile_content'.tr(),
+          toastType: ToastType.info,
+        );
+        // Continue anyway — the file still saves, just without a notification.
+      }
+    }
+
+    // Re-apply the per-group notification config defensively. If the engine
+    // restarted (background isolate cold start, etc.), the config from
+    // bootstrap may not be in place by the time we enqueue here.
+    downloader.configureNotificationForGroup(
+      kDownloadGroupVideo,
+      running: TaskNotification('downloading_media'.tr(), '${'file_name_text'.tr()}: {filename}'),
+      complete: TaskNotification('download_finished'.tr(), '${'file_name_text'.tr()}: {filename}'),
+      progressBar: true,
+    );
+
     final headers = ApiService.getRequestHeaders();
     final url = getOriginalUrlForRemoteId(widget.videoAssetId);
     final filename = _downloadFilename();
@@ -210,14 +236,19 @@ class _MemoryVideoPlayerPageState extends ConsumerState<MemoryVideoPlayerPage> {
       group: kDownloadGroupVideo,
     );
     try {
-      await ref.read(downloadRepositoryProvider).downloadAll([task]);
+      final ok = await downloader.enqueue(task);
       if (!mounted) {
         return;
       }
-      ImmichToast.show(
-        context: context,
-        msg: 'download_started'.tr(),
-      );
+      if (ok) {
+        ImmichToast.show(context: context, msg: 'download_started'.tr());
+      } else {
+        ImmichToast.show(
+          context: context,
+          msg: 'download_failed'.tr(),
+          toastType: ToastType.error,
+        );
+      }
     } catch (err) {
       if (!mounted) {
         return;
