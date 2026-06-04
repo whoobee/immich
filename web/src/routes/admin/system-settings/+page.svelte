@@ -1,4 +1,5 @@
 <script lang="ts">
+  import AlbumGeneratorSettings from './AlbumGeneratorSettings.svelte';
   import AuthSettings from './AuthSettings.svelte';
   import BackupSettings from './BackupSettings.svelte';
   import FFmpegSettings from './FFmpegSettings.svelte';
@@ -26,6 +27,7 @@
   import { Alert, CommandPaletteDefaultProvider, Container } from '@immich/ui';
   import {
     mdiAccountOutline,
+    mdiAutoFix,
     mdiBackupRestore,
     mdiBellOutline,
     mdiBookshelf,
@@ -61,6 +63,13 @@
     key: string;
     icon: string;
   }> = [
+    {
+      component: AlbumGeneratorSettings,
+      title: $t('admin.album_generator_settings'),
+      subtitle: $t('admin.album_generator_settings_description'),
+      key: 'album-generator',
+      icon: mdiAutoFix,
+    },
     {
       component: AuthSettings,
       title: $t('admin.authentication_settings'),
