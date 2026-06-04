@@ -70,11 +70,6 @@ function defaultedUserConfig(stored: AlbumGeneratorUserConfig | null): AlbumGene
   };
 }
 
-function firstSentence(text: string): string {
-  const match = text.match(/[^.!?]+[.!?]/);
-  return (match?.[0] ?? text).trim().slice(0, 140);
-}
-
 @Injectable()
 export class AlbumGeneratorService extends BaseService {
   private lock = false;
@@ -478,14 +473,9 @@ export class AlbumGeneratorService extends BaseService {
     const tmpDir = join('/tmp', `album-generator-${memoryId}`);
     this.storageRepository.mkdirSync(tmpDir);
     const titlePath = join(tmpDir, 'title.txt');
-    const subtitlePath = join(tmpDir, 'subtitle.txt');
 
     try {
       await this.storageRepository.createOrOverwriteFile(titlePath, Buffer.from(storyData.title, 'utf8'));
-      const subtitle = firstSentence(storyData.story);
-      if (subtitle) {
-        await this.storageRepository.createOrOverwriteFile(subtitlePath, Buffer.from(subtitle, 'utf8'));
-      }
 
       // Prefer the LLM's editorial pick when present and the file still
       // exists in the library; otherwise fall back to tag-based matching.
@@ -515,7 +505,6 @@ export class AlbumGeneratorService extends BaseService {
         ...DEFAULT_SLIDESHOW,
         fontFile: fontFile ?? undefined,
         title: fontFile ? titlePath : undefined,
-        subtitle: fontFile && subtitle ? subtitlePath : undefined,
         audioPath: audioPath ?? undefined,
         audioVolume: audioConfig.volume,
         // Stable shuffle of xfade transitions keyed off the memory id so

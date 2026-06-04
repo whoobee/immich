@@ -739,9 +739,6 @@
           autoplay
           playsinline
         ></video>
-        <p class="max-h-40 overflow-y-auto text-sm leading-relaxed text-immich-gray">
-          {aiStory.story}
-        </p>
       </div>
     </div>
   {/if}
