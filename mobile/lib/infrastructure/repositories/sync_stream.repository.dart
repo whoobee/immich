@@ -699,11 +699,18 @@ class SyncStreamRepository extends DriftDatabaseRepository {
     try {
       await _db.batch((batch) {
         for (final userMetadata in data) {
+          final key = userMetadata.key.toUserMetadataKey();
+          if (key == null) {
+            // Unknown / fork-only metadata key — log once and skip so a single
+            // unrecognised row doesn't abort the whole sync.
+            _logger.fine('Skipping unknown UserMetadataKey: ${userMetadata.key}');
+            continue;
+          }
           final companion = UserMetadataEntityCompanion(value: Value(userMetadata.value as Map<String, Object?>));
 
           batch.insert(
             _db.userMetadataEntity,
-            companion.copyWith(userId: Value(userMetadata.userId), key: Value(userMetadata.key.toUserMetadataKey())),
+            companion.copyWith(userId: Value(userMetadata.userId), key: Value(key)),
             onConflict: DoUpdate((_) => companion),
           );
         }
@@ -718,12 +725,14 @@ class SyncStreamRepository extends DriftDatabaseRepository {
     try {
       await _db.batch((batch) {
         for (final userMetadata in data) {
+          final key = userMetadata.key.toUserMetadataKey();
+          if (key == null) {
+            _logger.fine('Skipping unknown UserMetadataKey delete: ${userMetadata.key}');
+            continue;
+          }
           batch.delete(
             _db.userMetadataEntity,
-            UserMetadataEntityCompanion(
-              userId: Value(userMetadata.userId),
-              key: Value(userMetadata.key.toUserMetadataKey()),
-            ),
+            UserMetadataEntityCompanion(userId: Value(userMetadata.userId), key: Value(key)),
           );
         }
       });
@@ -929,11 +938,15 @@ extension on api.AssetVisibility {
 }
 
 extension on api.UserMetadataKey {
-  UserMetadataKey toUserMetadataKey() => switch (this) {
+  /// Returns null for keys the device doesn't model yet (e.g. fork-only
+  /// metadata). Callers must skip those rows rather than throw — a single
+  /// unknown row would otherwise abort the whole sync stream batch.
+  UserMetadataKey? toUserMetadataKey() => switch (this) {
     api.UserMetadataKey.onboarding => UserMetadataKey.onboarding,
     api.UserMetadataKey.preferences => UserMetadataKey.preferences,
     api.UserMetadataKey.license => UserMetadataKey.license,
-    _ => throw Exception('Unknown UserMetadataKey value: $this'),
+    api.UserMetadataKey.albumGenerator => UserMetadataKey.albumGenerator,
+    _ => null,
   };
 }
 

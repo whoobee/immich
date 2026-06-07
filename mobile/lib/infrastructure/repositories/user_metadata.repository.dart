@@ -21,5 +21,9 @@ extension UserMetadataDataExtension on UserMetadataEntityData {
     UserMetadataKey.onboarding => UserMetadata(userId: userId, key: key, onboarding: Onboarding.fromMap(value)),
     UserMetadataKey.preferences => UserMetadata(userId: userId, key: key, preferences: Preferences.fromMap(value)),
     UserMetadataKey.license => UserMetadata(userId: userId, key: key, license: License.fromMap(value)),
+    // Fork-only key — server-side config the mobile app doesn't model.
+    // Return a minimal DTO so callers that iterate every metadata row don't
+    // crash; the typed payload fields stay null.
+    UserMetadataKey.albumGenerator => UserMetadata(userId: userId, key: key),
   };
 }

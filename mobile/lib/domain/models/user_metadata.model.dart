@@ -1,10 +1,15 @@
 import 'package:immich_mobile/domain/models/user.model.dart';
 
 enum UserMetadataKey {
-  // do not change this order!
+  // do not change this order! Stored as IntColumn intEnum<UserMetadataKey>()
+  // so reordering or removing entries invalidates existing rows. Append only.
   onboarding,
   preferences,
   license,
+  // Fork-only: the per-user AI album generator config (opt-in, hints,
+  // maxPerNight). Server pushes this row down via sync_stream; we don't
+  // consume it on the device yet but we must accept it or sync explodes.
+  albumGenerator,
 }
 
 class Onboarding {
