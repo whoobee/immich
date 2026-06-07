@@ -229,7 +229,13 @@ class UserMetadata {
 
   const UserMetadata({required this.userId, required this.key, this.onboarding, this.preferences, this.license})
     : assert(
-        onboarding != null || preferences != null || license != null,
+        // Fork-only keys (currently just albumGenerator) round-trip the row
+        // without a typed Dart payload — the mobile app doesn't model their
+        // schema. For all other keys, exactly one typed payload is required.
+        key == UserMetadataKey.albumGenerator ||
+            onboarding != null ||
+            preferences != null ||
+            license != null,
         'One of onboarding, preferences and license must be provided',
       );
 
